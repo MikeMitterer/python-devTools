@@ -54,6 +54,9 @@ PYTHON_BOOTSTRAP ?= python3.14
 VENV   := .venv
 PYTHON := $(VENV)/bin/python
 RUFF   := $(VENV)/bin/ruff
+# pybabel über Python statt über sein Skript: pip schreibt in Skripte eine sh-Zeile, die einen
+# Checkout-Pfad mit $(…) auswerten würde.
+PYBABEL := $(PYTHON) -m babel.messages.frontend
 # Was setup herstellt und require-setup prüft: Paket und Werkzeuge in der .venv und die .mo.
 CATALOGS     := $(patsubst %.po,%.mo,$(wildcard src/mmit_devtools/locale/*/LC_MESSAGES/*.po))
 SETUP_STAMPS := $(VENV)/.installed $(CATALOGS)
@@ -181,7 +184,7 @@ $(VENV)/.installed: pyproject.toml
 
 # Die .mo sind nicht im Git, damit parallele Tickets nicht an Binärdateien kollidieren.
 %.mo: %.po $(VENV)/.installed
-	@$(VENV)/bin/pybabel --quiet compile -i "$<" -o "$@"
+	@$(PYBABEL) --quiet compile -i "$<" -o "$@"
 	@echo -e "  $(GREEN)✓$(RESET) Übersetzung $@ erzeugt"
 
 # Ohne Hilfeeintrag: Prüf-Targets richten nichts ein, sie melden eine fehlende oder veraltete
@@ -231,7 +234,7 @@ format: require-setup ## Python-Dateien mit Ruff formatieren
 .PHONY: messages
 messages: require-setup ## Alle Texte des Codes (_) nach build/mmit-devtools.pot sammeln
 	@mkdir -p build
-	@$(VENV)/bin/pybabel --quiet extract -F babel.cfg --no-location -o build/mmit-devtools.pot .
+	@$(PYBABEL) --quiet extract -F babel.cfg --no-location -o build/mmit-devtools.pot .
 	@echo -e "  $(GREEN)✓$(RESET) build/mmit-devtools.pot"
 
 # ─── Versionierung ───────────────────────────────────────────────────────────

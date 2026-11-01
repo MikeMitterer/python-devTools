@@ -12,7 +12,8 @@ from pathlib import Path
 
 import pytest
 
-# Der installierte Befehl aus der venv der Tests, nicht ein Modulaufruf.
+# Der installierte Befehl aus der venv der Tests, nicht ein Modulaufruf. Gestartet über Python:
+# In einem Checkout-Pfad mit $(…) würde die sh-Zeile, die pip ins Skript schreibt, ihn auswerten.
 COMMAND = Path(sys.executable).parent / "devtools"
 
 GIT_BASHLIB = "git+https://github.com/MikeMitterer/bash-lib.git"
@@ -20,13 +21,14 @@ GIT_TOOLS = "git+https://github.com/MikeMitterer/bash-ProjectTools.git"
 
 # list --json liefert den Stand aus PIPX_STATE, install schreibt ihn neu und protokolliert den
 # Aufruf in PIPX_CALLS. Das Paket einer Git-URL steht in PIPX_GIT_PACKAGES, die Version im Tag.
-FAKE_PIPX = """#!{python}
+# Gestartet über LAUNCHER: Ein Shebang mit dem Python-Pfad bräche an Leerzeichen im Checkout-Pfad.
+FAKE_PIPX = """\
 import json, os, re, sys, tomllib
 from pathlib import Path
 state = Path(os.environ["PIPX_STATE"])
 data = json.loads(state.read_text())
 if sys.argv[1:3] == ["list", "--json"]:
-    print(json.dumps({{"venvs": data}}))
+    print(json.dumps({"venvs": data}))
     sys.exit(0)
 with open(os.environ["PIPX_CALLS"], "a") as log:
     log.write(json.dumps(sys.argv[1:]) + "\\n")
@@ -43,11 +45,12 @@ if spec.startswith("git+"):
 else:
     project = tomllib.loads((Path(spec) / "pyproject.toml").read_text())["project"]
     package, version = project["name"], project["version"]
-data[package] = {{"metadata": {{"main_package": {{
+data[package] = {"metadata": {"main_package": {
     "package": package, "package_or_url": spec, "package_version": version,
-    "pip_args": ["--editable"] if editable else []}}}}}}
+    "pip_args": ["--editable"] if editable else []}}}
 state.write_text(json.dumps(data))
 """
+LAUNCHER = '#!/bin/sh\nexec "$PIPX_PYTHON" "$PIPX_SCRIPT" "$@"\n'
 
 
 def venv(spec: str, version: str, editable: bool = False) -> dict:
@@ -89,6 +92,8 @@ class Sandbox:
         conf.write_text("".join(f"{key}={value}\n" for key, value in self.config.items()))
         environment = {
             "PATH": f"{self.root / 'bin'}:/usr/bin:/bin",
+            "PIPX_PYTHON": sys.executable,
+            "PIPX_SCRIPT": str(self.root / "bin" / "fake_pipx.py"),
             "PIPX_STATE": str(self.root / "state.json"),
             "PIPX_CALLS": str(calls),
             "PIPX_GIT_PACKAGES": json.dumps(
@@ -97,7 +102,11 @@ class Sandbox:
             **(env or {}),
         }
         result = subprocess.run(
-            [str(COMMAND), *args], capture_output=True, text=True, env=environment, cwd=self.root
+            [sys.executable, str(COMMAND), *args],
+            capture_output=True,
+            text=True,
+            env=environment,
+            cwd=self.root,
         )
         self.state = json.loads((self.root / "state.json").read_text())
         return result, [json.loads(call) for call in calls.read_text().splitlines()]
@@ -108,9 +117,10 @@ def sandbox(tmp_path: Path) -> Sandbox:
     """ProjectTools aktuell, BashLib veraltet; beide mit Git-Quelle."""
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
-    fake = bin_dir / "pipx"
-    fake.write_text(FAKE_PIPX.format(python=sys.executable))
-    fake.chmod(0o755)
+    (bin_dir / "fake_pipx.py").write_text(FAKE_PIPX)
+    launcher = bin_dir / "pipx"
+    launcher.write_text(LAUNCHER)
+    launcher.chmod(0o755)
     config = {
         "PROJECTTOOLS_PACKAGE": "mmit-projecttools",
         "PROJECTTOOLS_LABEL": "ProjectTools",
