@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+#------------------------------------------------------------------------------
+# pre-commit — Nutzerdoku vor jedem Commit prüfen
+#
+# Aktiv über `git config core.hooksPath .githooks` (macht `make setup`).
+# Ruft `make docs-check` auf und bricht den Commit ab, wenn die Prüfung
+# Probleme meldet; Hinweise lassen ihn durch. Ohne Probleme erscheint nur die
+# Ergebniszeile, sonst die vollständige Ausgabe.
+#
+# Geprüft wird der vorgemerkte Stand, also genau das, was der Commit enthält:
+# Der Hook schreibt den Index in ein temporäres Verzeichnis und lässt die
+# Prüfung dort laufen, mit Git-Verzeichnis und Index dieses Repositorys.
+# Nicht vorgemerkte Änderungen und neue, nicht vorgemerkte Dateien zählen
+# deshalb nicht mit.
+#
+# Im Notfall umgehen: git commit --no-verify
+#
+# Herkunft: makefile-conventions, references/docs-check.md (Abschnitt
+# „Prüfung vor jedem Commit“); Änderungen zuerst dort, dann hier übernehmen.
+#------------------------------------------------------------------------------
+
+set -euo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+readonly ROOT
+cd "${ROOT}"
+
+# Bei `git commit -a` oder `git commit <pfad>` setzt git einen eigenen Index;
+# ein relativer Pfad muss nach dem Wechsel ins Snapshot-Verzeichnis gelten.
+if [[ -n "${GIT_INDEX_FILE:-}" && "${GIT_INDEX_FILE}" != /* ]]; then
+    export GIT_INDEX_FILE="${ROOT}/${GIT_INDEX_FILE}"
+fi
+
+# Ohne ProjectTools nur warnen: make check bleibt die harte Grenze, ein Commit
+# auf einem Rechner ohne die Werkzeuge soll nicht daran scheitern.
+if ! make --no-print-directory -s require-tools 2>/dev/null; then
+    echo "  ⚠ ProjectTools fehlt oder ist zu alt — Doku nicht geprüft (make hints)"
+    exit 0
+fi
+
+SNAPSHOT="$(mktemp -d "${TMPDIR:-/tmp}/docs-check-index.XXXXXX")"
+readonly SNAPSHOT
+OUTPUT="$(mktemp "${TMPDIR:-/tmp}/docs-check.XXXXXX")"
+readonly OUTPUT
+trap 'command rm -rf -- "${SNAPSHOT}" "${OUTPUT}"' EXIT
+
+git checkout-index --all --prefix="${SNAPSHOT}/"
+
+GIT_DIR="$(git rev-parse --absolute-git-dir)"
+export GIT_DIR
+export GIT_WORK_TREE="${SNAPSHOT}"
+
+if make --no-print-directory -C "${SNAPSHOT}" docs-check >"${OUTPUT}" 2>&1; then
+    # Ergebniszeile und Warnungen; vor dem ⚠ kann ein Farbcode stehen.
+    grep -E '^Ergebnis|⚠' "${OUTPUT}" || true
+    exit 0
+fi
+
+cat "${OUTPUT}"
+echo
+echo "Commit abgebrochen: make docs-check meldet Probleme im vorgemerkten Stand (siehe oben)."
+echo "Beheben, vormerken und erneut committen; im Notfall: git commit --no-verify"
+exit 1
