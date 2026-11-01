@@ -23,8 +23,13 @@ class Installed:
 
     @property
     def local(self) -> bool:
-        """Ist eine Arbeitskopie installiert (ein Ordner statt einer URL oder eines Pakets)?"""
-        return Path(self.spec).is_dir()
+        """Ist eine Arbeitskopie installiert (ein Ordner statt einer URL oder eines Pakets)?
+
+        pipx führt eine Arbeitskopie mit absolutem Pfad, ein Paket von PyPI unter seinem bloßen
+        Namen; ein gleichnamiger Ordner im aktuellen Ordner ist deshalb keine Arbeitskopie.
+        """
+        path = Path(self.spec)
+        return path.is_absolute() and path.is_dir()
 
 
 def run(command: list[str]) -> subprocess.CompletedProcess[str]:

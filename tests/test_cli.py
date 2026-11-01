@@ -1,5 +1,6 @@
 """devtools status, install, check und command gegen den pipx-Ersatz aus conftest."""
 
+import json
 from pathlib import Path
 
 from babel.messages.mofile import write_mo
@@ -10,6 +11,7 @@ CATALOG = (
     Path(__file__).resolve().parents[1] / "src/mmit_devtools/locale/de/LC_MESSAGES/mmit-devtools.po"
 )
 
+TXT = "git+https://example.invalid/txt.git"
 BASHLIB_GIT_CALL = ["install", "--force", f"{GIT_BASHLIB}@v0.2.0+261031.2038.b22f0"]
 
 
@@ -162,3 +164,20 @@ def test_output_follows_language(sandbox):
 
     shown, _ = sandbox.run("--help", env={"LANGUAGE": "de"})
     assert "--config DATEI" in shown.stdout and "Installationsbefehl" in shown.stdout
+
+
+def test_package_name_is_no_working_copy_even_with_same_folder(sandbox):
+    """pipx führt ein Paket von PyPI unter seinem bloßen Namen. Ein gleichnamiger Ordner im
+    aktuellen Ordner macht daraus keine Arbeitskopie: veraltet bleibt veraltet."""
+    sandbox.config.update(TXT_PACKAGE="txtstyle", TXT_TAG="v2.0.0", TXT_SOURCE=TXT)
+    sandbox.state["txtstyle"] = venv("txtstyle", "1.1.2")
+    (sandbox.root / "txtstyle").mkdir()
+    shown, calls = sandbox.run("status")
+    assert "txtstyle      1.1.2, wanted 2.0.0 → devtools install" in shown.stdout, shown.stdout
+    assert calls == [], calls
+    checked, _ = sandbox.run("check", "txt")
+    assert checked.returncode == 1 and "txtstyle 1.1.2 is too old" in checked.stderr
+
+    packages = {GIT_TOOLS: "mmit-projecttools", GIT_BASHLIB: "mmit-bashlib", TXT: "txtstyle"}
+    _, calls = sandbox.run("install", env={"PIPX_GIT_PACKAGES": json.dumps(packages)})
+    assert ["install", "--force", f"{TXT}@v2.0.0"] in calls, calls
