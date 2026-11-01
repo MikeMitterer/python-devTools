@@ -1,0 +1,39 @@
+[build-system]
+# Babel übersetzt beim Bauen die Kataloge (setup.py)
+requires = ["setuptools>=77", "Babel==2.18.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mmit-devtools"
+version = "0.1.0"
+description = "Check, show and install the pipx development tools a project lists in .dev-tools.conf.sh"
+readme = "README.md"
+# 3.11: tomllib für die Version einer Arbeitskopie
+requires-python = ">=3.11"
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/MikeMitterer/python-devtools"
+
+[project.optional-dependencies]
+# Entwicklung: Tests, Lint und Kataloge (make setup)
+dev = ["pytest", "ruff", "Babel==2.18.0"]
+
+[project.scripts]
+devtools = "mmit_devtools.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+# Die .mo kommen nur aus dem Bauschritt (setup.py), nie aus dem Quellbaum.
+mmit_devtools = ["locale/*/LC_MESSAGES/*.po"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B"]

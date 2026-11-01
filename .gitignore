@@ -1,2 +1,18 @@
 /_tickets/
 /.worktrees/
+
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.DS_Store
+
+# Entwicklungs-venv (make setup)
+.venv/
+
+# Reste von Paket-Builds (pip wheel, pip install -e)
+build/
+dist/
+*.egg-info/
+
+# Übersetzte Kataloge: make setup und der Paketbau erzeugen sie aus den .po
+*.mo

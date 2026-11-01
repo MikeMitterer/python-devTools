@@ -1,0 +1,3 @@
+# Neue Einträge hängen zwei Tickets oft an dieselbe Stelle; beide bleiben.
+# Doppelte Kennungen fängt tests/test_i18n.py ab.
+*.po merge=union

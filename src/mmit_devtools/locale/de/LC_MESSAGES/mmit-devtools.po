@@ -1,0 +1,97 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: mmit-devtools\n"
+"Language: de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "{state} → devtools install"
+msgstr "{state} → devtools install"
+
+msgid "pipx failed ({state}): {command}"
+msgstr "pipx scheiterte ({state}): {command}"
+
+msgid "✗ {label} missing (requires {minimum} or later): {command}"
+msgstr "✗ {label} fehlt (verlangt ab {minimum}): {command}"
+
+msgid "✗ {label} {version} is too old (requires {minimum} or later): {command}"
+msgstr "✗ {label} {version} ist zu alt (verlangt ab {minimum}): {command}"
+
+msgid "Show, install and check the development tools from {config} with pipx."
+msgstr "Entwicklungswerkzeuge aus {config} über pipx zeigen, installieren und prüfen."
+
+msgid "FILE"
+msgstr "DATEI"
+
+msgid "another config instead of {config} in the current folder"
+msgstr "andere Config statt {config} im aktuellen Ordner"
+
+msgid "COMMAND"
+msgstr "BEFEHL"
+
+msgid "show state and source of each tool, install nothing"
+msgstr "je Werkzeug Stand und Quelle zeigen, nichts installieren"
+
+msgid "bring each tool to its source and tag"
+msgstr "jedes Werkzeug auf Quelle und Tag bringen"
+
+msgid "check the minimum version; otherwise name the command, exit 1"
+msgstr "Mindestversion prüfen; sonst Befehl nennen, Exit 1"
+
+msgid "print the install command"
+msgstr "Installationsbefehl ausgeben"
+
+msgid "NAME"
+msgstr "NAME"
+
+msgid "✗ Unknown tool {name}; known: {known}"
+msgstr "✗ Unbekanntes Werkzeug {name}; bekannt: {known}"
+
+msgid "{path} is missing. Example:"
+msgstr "{path} fehlt. Beispiel:"
+
+msgid "{path}: no tool (NAME_PACKAGE). Example:"
+msgstr "{path}: kein Werkzeug (NAME_PACKAGE). Beispiel:"
+
+msgid "{path}: {key} is missing"
+msgstr "{path}: {key} fehlt"
+
+msgid "{path}: {key} is {value}, allowed are yes and no"
+msgstr "{path}: {key} ist {value}, erlaubt sind yes und no"
+
+msgid "pipx is missing from PATH (https://pipx.pypa.io)"
+msgstr "pipx fehlt im PATH (https://pipx.pypa.io)"
+
+msgid "pipx list failed: {error}"
+msgstr "pipx list scheiterte: {error}"
+
+msgid "pipx list --json is not readable: {error}"
+msgstr "pipx list --json nicht lesbar: {error}"
+
+msgid "missing"
+msgstr "fehlt"
+
+msgid "{version} from {source}, wanted {wanted}"
+msgstr "{version} aus {source}, verlangt {wanted}"
+
+msgid "{version}, working copy has {wanted}"
+msgstr "{version}, Arbeitskopie hat {wanted}"
+
+msgid "current ({version}, working copy {path})"
+msgstr "aktuell ({version}, Arbeitskopie {path})"
+
+msgid "working copy {path} ({version}), left untouched"
+msgstr "Arbeitskopie {path} ({version}), unberührt"
+
+msgid "{version}, wanted {wanted}"
+msgstr "{version}, verlangt {wanted}"
+
+msgid "current ({version})"
+msgstr "aktuell ({version})"
+
+msgid "installed {version} ({source})"
+msgstr "installiert {version} ({source})"
+
+msgid "updated from {old} to {new} ({source})"
+msgstr "aktualisiert von {old} auf {new} ({source})"
