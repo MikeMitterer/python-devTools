@@ -12,12 +12,13 @@ PROJECT_NAME := $(shell basename -- $(WORKSPACE_SQ))
 # oder Apostroph im Checkout-Pfad wertete die Shell sonst aus.
 export WORKSPACE WORKSPACE_SQ PROJECT_NAME MSG
 
-# Release-Tags der pipx-Werkzeuge stehen in .dev-tools.conf.sh; selbst entwickelt: make hints.
+# Paket, Release-Tag und Quelle der pipx-Werkzeuge stehen nur in .dev-tools.conf.sh (Format von
+# devtools); selbst entwickelt: make hints.
 include .dev-tools.conf.sh
 PROJECTTOOLS_MIN     := $(patsubst v%,%,$(firstword $(subst +, ,$(PROJECTTOOLS_TAG))))
-PROJECTTOOLS_INSTALL := pipx install --force 'git+https://github.com/MikeMitterer/bash-ProjectTools.git@$(PROJECTTOOLS_TAG)'
+PROJECTTOOLS_INSTALL := pipx install --force '$(PROJECTTOOLS_SOURCE)@$(PROJECTTOOLS_TAG)'
 PROJECTTOOLS_FOUND    = $(shell projecttools --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
-BASHLIB_INSTALL      := pipx install --force 'git+https://github.com/MikeMitterer/bash-lib.git@$(BASHLIB_TAG)'
+BASHLIB_INSTALL      := pipx install --force '$(BASHLIB_SOURCE)@$(BASHLIB_TAG)'
 
 # BashLib für version und tag-* (Maintainer): ein von außen gesetztes BASH_LIBS geht vor,
 # sonst bashlib-path aus der pipx-Installation.
