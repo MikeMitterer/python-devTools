@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from mmit_devtools.config import Tool
+from mmit_devtools.i18n import _
 from mmit_devtools.pipx import Installed
 from mmit_devtools.versions import as_tuple, working_copy_version
 
@@ -33,24 +34,32 @@ def plan(tool: Tool, found: Installed | None) -> Plan:
     entwickelt, hat sie bewusst installiert.
     """
     if found is None:
-        return Plan("fehlt", True)
+        return Plan(_("missing"), True)
     if tool.local:
         if not same_copy(tool, found) or found.editable != tool.editable:
-            return Plan(f"{found.version} aus {found.spec}, verlangt {tool.source}", True)
+            text = _("{version} from {source}, wanted {wanted}")
+            return Plan(
+                text.format(version=found.version, source=found.spec, wanted=tool.source), True
+            )
         wanted = working_copy_version(Path(tool.source))
         if not tool.editable and as_tuple(found.version) < as_tuple(wanted):
-            return Plan(f"{found.version}, Arbeitskopie hat {wanted}", True)
-        return Plan(f"aktuell ({found.version}, Arbeitskopie {tool.source})", False)
+            text = _("{version}, working copy has {wanted}")
+            return Plan(text.format(version=found.version, wanted=wanted), True)
+        text = _("current ({version}, working copy {path})")
+        return Plan(text.format(version=found.version, path=tool.source), False)
     if found.local:
-        return Plan(f"Arbeitskopie {found.spec} ({found.version}), unberührt", False)
+        text = _("working copy {path} ({version}), left untouched")
+        return Plan(text.format(path=found.spec, version=found.version), False)
     if not satisfies(found, tool):
-        return Plan(f"{found.version}, verlangt {tool.minimum}", True)
-    return Plan(f"aktuell ({found.version})", False)
+        text = _("{version}, wanted {wanted}")
+        return Plan(text.format(version=found.version, wanted=tool.minimum), True)
+    return Plan(_("current ({version})").format(version=found.version), False)
 
 
 def done(tool: Tool, before: Installed | None, after: Installed | None) -> str:
     """Meldung nach einem pipx-Aufruf: installiert oder aktualisiert von X auf Y."""
     new = after.version if after else "?"
     if before is None:
-        return f"installiert {new} ({tool.source})"
-    return f"aktualisiert von {before.version} auf {new} ({tool.source})"
+        return _("installed {version} ({source})").format(version=new, source=tool.source)
+    text = _("updated from {old} to {new} ({source})")
+    return text.format(old=before.version, new=new, source=tool.source)

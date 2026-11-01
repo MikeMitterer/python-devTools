@@ -13,3 +13,6 @@ __pycache__/
 build/
 dist/
 *.egg-info/
+
+# Übersetzte Kataloge: make setup und der Paketbau erzeugen sie aus den .po
+*.mo

@@ -5,6 +5,7 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+from mmit_devtools.i18n import _
 from mmit_devtools.versions import working_copy_version
 
 
@@ -31,19 +32,20 @@ def run(command: list[str]) -> subprocess.CompletedProcess[str]:
     try:
         return subprocess.run(command, capture_output=True, text=True)
     except FileNotFoundError:
-        raise PipxError("pipx fehlt im PATH (https://pipx.pypa.io)") from None
+        raise PipxError(_("pipx is missing from PATH (https://pipx.pypa.io)")) from None
 
 
 def installed() -> dict[str, Installed]:
     """Stand aller pipx-Pakete aus pipx list --json, je Paketname."""
     result = run(["pipx", "list", "--json"])
     if result.returncode:
-        raise PipxError(f"pipx list scheiterte: {result.stderr.strip()}")
+        raise PipxError(_("pipx list failed: {error}").format(error=result.stderr.strip()))
     try:
         venvs = json.loads(result.stdout).get("venvs", {})
         return {package: entry(venv) for package, venv in venvs.items()}
     except (ValueError, KeyError, TypeError, AttributeError) as error:
-        raise PipxError(f"pipx list --json nicht lesbar: {error}") from None
+        text = _("pipx list --json is not readable: {error}")
+        raise PipxError(text.format(error=error)) from None
 
 
 def entry(venv: dict) -> Installed:

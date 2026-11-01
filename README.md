@@ -30,12 +30,13 @@ each Makefile.
 
 ```console
 $ devtools install
-  ProjectTools  aktuell (0.3.2)
-  BashLib       aktualisiert von 0.1.0 auf 0.2.0 (git+https://github.com/MikeMitterer/bash-lib.git)
+  ProjectTools  current (0.3.2)
+  BashLib       updated from 0.1.0 to 0.2.0 (git+https://github.com/MikeMitterer/bash-lib.git)
 ```
 
 One line per tool: current, updated from one version to another, installed,
-or a working copy. The output is in German.
+or a working copy. The output is in English or German, depending on the
+locale (`LANGUAGE`, `LC_ALL`, `LANG`).
 
 [↑ Contents](#contents)
 
@@ -52,7 +53,8 @@ or a working copy. The output is in German.
   `pyproject.toml` instead.
 - **Minimum version check:** `devtools check NAME` fails with the install
   command, ready for a Makefile.
-- **Standard library only:** Python 3.11 or later, no further packages.
+- **Standard library only:** Python 3.11 or later, no further packages at
+  runtime.
 
 [↑ Contents](#contents)
 

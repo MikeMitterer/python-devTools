@@ -8,6 +8,7 @@ from pathlib import Path
 
 from mmit_devtools import pipx
 from mmit_devtools.config import CONFIG_NAME, ConfigError, Tool, load_tools
+from mmit_devtools.i18n import _
 from mmit_devtools.sync import done, plan, satisfies
 
 PACKAGE = "mmit-devtools"
@@ -24,7 +25,8 @@ def status(tools: list[Tool]) -> int:
     found = pipx.installed()
     for tool in tools:
         result = plan(tool, found.get(tool.package))
-        line(tools, tool, result.text + (" → devtools install" if result.needed else ""))
+        hint = _("{state} → devtools install").format(state=result.text)
+        line(tools, tool, hint if result.needed else result.text)
     return 0
 
 
@@ -40,7 +42,8 @@ def install(tools: list[Tool]) -> int:
         called = pipx.run(tool.command())
         if called.returncode:
             failed = 1
-            line(tools, tool, f"pipx scheiterte ({result.text}): {shlex.join(tool.command())}")
+            text = _("pipx failed ({state}): {command}")
+            line(tools, tool, text.format(state=result.text, command=shlex.join(tool.command())))
             sys.stderr.write(called.stderr[-2000:])
             continue
         line(tools, tool, done(tool, before, pipx.installed().get(tool.package)))
@@ -52,10 +55,12 @@ def check(tool: Tool) -> int:
     found = pipx.installed().get(tool.package)
     if found is not None and satisfies(found, tool):
         return 0
-    problem = "fehlt" if found is None else f"{found.version} ist zu alt"
-    sys.stderr.write(
-        f"  ✗ {tool.label} {problem} (verlangt ab {tool.minimum}): {shlex.join(tool.command())}\n"
-    )
+    if found is None:
+        text = _("✗ {label} missing (requires {minimum} or later): {command}")
+    else:
+        text = _("✗ {label} {version} is too old (requires {minimum} or later): {command}")
+    values = {"label": tool.label, "minimum": tool.minimum, "command": shlex.join(tool.command())}
+    sys.stderr.write(f"  {text.format(version=found and found.version, **values)}\n")
     return 1
 
 
@@ -63,26 +68,29 @@ def parser() -> argparse.ArgumentParser:
     """Argumente: status, install, check NAME, command NAME, --config und --version."""
     result = argparse.ArgumentParser(
         prog="devtools",
-        description=f"Entwicklungswerkzeuge aus {CONFIG_NAME} über pipx zeigen, "
-        "installieren und prüfen.",
+        description=_(
+            "Show, install and check the development tools from {config} with pipx."
+        ).format(config=CONFIG_NAME),
     )
     result.add_argument(
         "-f",
         "--config",
-        metavar="DATEI",
+        metavar=_("FILE"),
         type=Path,
         default=Path(CONFIG_NAME),
-        help=f"andere Config statt {CONFIG_NAME} im aktuellen Ordner",
+        help=_("another config instead of {config} in the current folder").format(
+            config=CONFIG_NAME
+        ),
     )
     result.add_argument("--version", action="version", version=f"%(prog)s {version(PACKAGE)}")
-    commands = result.add_subparsers(dest="command", metavar="BEFEHL")
-    commands.add_parser("status", help="je Werkzeug Stand und Quelle zeigen, nichts installieren")
-    commands.add_parser("install", help="jedes Werkzeug auf Quelle und Tag bringen")
+    commands = result.add_subparsers(dest="command", metavar=_("COMMAND"))
+    commands.add_parser("status", help=_("show state and source of each tool, install nothing"))
+    commands.add_parser("install", help=_("bring each tool to its source and tag"))
     for name, text in (
-        ("check", "Mindestversion prüfen; sonst Befehl nennen, Exit 1"),
-        ("command", "Installationsbefehl ausgeben"),
+        ("check", _("check the minimum version; otherwise name the command, exit 1")),
+        ("command", _("print the install command")),
     ):
-        commands.add_parser(name, help=text).add_argument("name", metavar="NAME")
+        commands.add_parser(name, help=text).add_argument("name", metavar=_("NAME"))
     return result
 
 
@@ -101,8 +109,9 @@ def main(argv: list[str] | None = None) -> int:
         named = {tool.name: tool for tool in tools}
         tool = named.get(arguments.name.lower())
         if tool is None:
+            text = _("✗ Unknown tool {name}; known: {known}")
             sys.stderr.write(
-                f"  ✗ Unbekanntes Werkzeug {arguments.name!r}; bekannt: {', '.join(named)}\n"
+                f"  {text.format(name=repr(arguments.name), known=', '.join(named))}\n"
             )
             return 2
         if arguments.command == "command":

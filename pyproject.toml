@@ -1,5 +1,6 @@
 [build-system]
-requires = ["setuptools>=77"]
+# Babel übersetzt beim Bauen die Kataloge (setup.py)
+requires = ["setuptools>=77", "Babel==2.18.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -15,14 +16,18 @@ dependencies = []
 Homepage = "https://github.com/MikeMitterer/python-devtools"
 
 [project.optional-dependencies]
-# Entwicklung: Tests und Lint (make setup)
-dev = ["pytest", "ruff"]
+# Entwicklung: Tests, Lint und Kataloge (make setup)
+dev = ["pytest", "ruff", "Babel==2.18.0"]
 
 [project.scripts]
 devtools = "mmit_devtools.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+# Die .mo kommen nur aus dem Bauschritt (setup.py), nie aus dem Quellbaum.
+mmit_devtools = ["locale/*/LC_MESSAGES/*.po"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

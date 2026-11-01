@@ -54,6 +54,9 @@ PYTHON_BOOTSTRAP ?= python3.14
 VENV   := .venv
 PYTHON := $(VENV)/bin/python
 RUFF   := $(VENV)/bin/ruff
+# Was setup herstellt und require-setup prüft: Paket und Werkzeuge in der .venv und die .mo.
+CATALOGS     := $(patsubst %.po,%.mo,$(wildcard src/mmit_devtools/locale/*/LC_MESSAGES/*.po))
+SETUP_STAMPS := $(VENV)/.installed $(CATALOGS)
 SHELL_FILES := .githooks/pre-commit .dev-tools.conf.sh .docs-check.conf.sh .repo-status.conf.sh
 
 # ─── Hilfe ───────────────────────────────────────────────────────────────────
@@ -162,7 +165,7 @@ require-tools:
 # Der einzige Einrichtungsweg, auch für agent-lessons (worktree_setup). Wiederholbar: die .venv
 # gleicht er nur ab, wenn pyproject.toml neuer ist als die Stempeldatei.
 .PHONY: setup
-setup: $(VENV)/.installed ## Git-Hooks und .venv mit dem Paket und den Prüfwerkzeugen einrichten
+setup: $(SETUP_STAMPS) ## Git-Hooks, .venv mit dem Paket und den Prüfwerkzeugen, Übersetzungen einrichten
 	@git config core.hooksPath .githooks   # pre-commit: make docs-check
 
 # Stempeldatei: nur setup legt sie an. Nicht .venv/bin/python als Ziel nehmen; es ist ein Link
@@ -176,11 +179,16 @@ $(VENV)/.installed: pyproject.toml
 	@touch "$@"
 	@echo -e "  $(GREEN)✓$(RESET) .venv eingerichtet"
 
+# Die .mo sind nicht im Git, damit parallele Tickets nicht an Binärdateien kollidieren.
+%.mo: %.po $(VENV)/.installed
+	@$(VENV)/bin/pybabel --quiet compile -i "$<" -o "$@"
+	@echo -e "  $(GREEN)✓$(RESET) Übersetzung $@ erzeugt"
+
 # Ohne Hilfeeintrag: Prüf-Targets richten nichts ein, sie melden eine fehlende oder veraltete
 # Einrichtung.
 .PHONY: require-setup
 require-setup:
-	@$(MAKE) --no-print-directory -q $(VENV)/.installed 2>/dev/null || { \
+	@$(MAKE) --no-print-directory -q $(SETUP_STAMPS) 2>/dev/null || { \
 		echo -e "  $(RED)✗$(RESET) Nicht eingerichtet oder veraltet: $(YELLOW)make setup$(RESET)" >&2; \
 		exit 1; }
 
@@ -210,14 +218,21 @@ docs-check: require-tools ## Nutzerdoku gegen das Projekt prüfen (Links, Befehl
 
 .PHONY: lint
 lint: require-setup ## Ruff (Lint und Format) und Shellcheck
-	@$(RUFF) check -q src tests
-	@$(RUFF) format -q --check src tests
+	@$(RUFF) check -q src tests setup.py
+	@$(RUFF) format -q --check src tests setup.py
 	@shellcheck $(SHELL_FILES)
 	@echo -e "  $(GREEN)✓$(RESET) Lint sauber"
 
 .PHONY: format
 format: require-setup ## Python-Dateien mit Ruff formatieren
-	@$(RUFF) format src tests
+	@$(RUFF) format src tests setup.py
+
+# Zum Vergleich mit dem Katalog; die .po wird von Hand gepflegt (docs/development.md).
+.PHONY: messages
+messages: require-setup ## Alle Texte des Codes (_) nach build/mmit-devtools.pot sammeln
+	@mkdir -p build
+	@$(VENV)/bin/pybabel --quiet extract -F babel.cfg --no-location -o build/mmit-devtools.pot .
+	@echo -e "  $(GREEN)✓$(RESET) build/mmit-devtools.pot"
 
 # ─── Versionierung ───────────────────────────────────────────────────────────
 

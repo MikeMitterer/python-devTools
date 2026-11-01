@@ -10,6 +10,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from mmit_devtools.i18n import _
 from mmit_devtools.versions import semver
 
 CONFIG_NAME = ".dev-tools.conf.sh"
@@ -68,7 +69,9 @@ def read_entries(path: Path) -> dict[str, str]:
     try:
         text = path.read_text(encoding="utf-8")
     except FileNotFoundError:
-        raise ConfigError(f"{path} fehlt. Beispiel:\n\n{EXAMPLE}") from None
+        raise ConfigError(
+            _("{path} is missing. Example:").format(path=path) + f"\n\n{EXAMPLE}"
+        ) from None
     except OSError as error:
         raise ConfigError(f"{path}: {error.strerror}") from None
     entries = {}
@@ -84,7 +87,8 @@ def load_tools(path: Path) -> list[Tool]:
     entries = read_entries(path)
     prefixes = [key.removesuffix("_PACKAGE") for key in entries if key.endswith("_PACKAGE")]
     if not prefixes:
-        raise ConfigError(f"{path}: kein Werkzeug (NAME_PACKAGE). Beispiel:\n\n{EXAMPLE}")
+        text = _("{path}: no tool (NAME_PACKAGE). Example:").format(path=path)
+        raise ConfigError(f"{text}\n\n{EXAMPLE}")
     return [tool(path, entries, prefix) for prefix in prefixes]
 
 
@@ -94,7 +98,9 @@ def tool(path: Path, entries: dict[str, str], prefix: str) -> Tool:
     def required(key: str) -> str:
         value = entries.get(f"{prefix}_{key}", "")
         if not value:
-            raise ConfigError(f"{path}: {prefix}_{key} fehlt")
+            raise ConfigError(
+                _("{path}: {key} is missing").format(path=path, key=f"{prefix}_{key}")
+            )
         return value
 
     package, tag, source = required("PACKAGE"), required("TAG"), required("SOURCE")
@@ -102,6 +108,7 @@ def tool(path: Path, entries: dict[str, str], prefix: str) -> Tool:
         source = str((path.parent / os.path.expanduser(source)).resolve())
     editable = entries.get(f"{prefix}_EDITABLE", "yes").lower()
     if editable not in YES + NO:
-        raise ConfigError(f"{path}: {prefix}_EDITABLE ist {editable!r}, erlaubt sind yes und no")
+        text = _("{path}: {key} is {value}, allowed are yes and no")
+        raise ConfigError(text.format(path=path, key=f"{prefix}_EDITABLE", value=repr(editable)))
     label = entries.get(f"{prefix}_LABEL") or package
     return Tool(prefix.lower(), package, label, tag, source, editable in YES)
