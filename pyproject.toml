@@ -1,5 +1,5 @@
 [build-system]
-# Babel übersetzt beim Bauen die Kataloge (setup.py)
+# Babel übersetzt beim Bauen die Kataloge (setup.py); 77: license als SPDX-Ausdruck mit license-files
 requires = ["setuptools>=77", "Babel==2.18.0"]
 build-backend = "setuptools.build_meta"
 
@@ -8,6 +8,8 @@ name = "mmit-devtools"
 version = "0.1.0"
 description = "Check, show and install the pipx development tools a project lists in .dev-tools.conf.sh"
 readme = "README.md"
+license = "EUPL-1.2"
+license-files = ["LICENSE", "LICENSE.de.txt", "LICENSING.md"]
 # 3.11: tomllib für die Version einer Arbeitskopie
 requires-python = ">=3.11"
 dependencies = []

@@ -68,6 +68,8 @@ FORBIDDEN=(
     # "/\bP(U|G)ID\b/i|interne Variablen, nicht in Nutzerdoku"
     # Standardnutzer als Zahl und als Name
     # "/\b99:100\b|\bnobody:users\b/i|Standard-IDs, nicht in Nutzerdoku"
+    # EUPL-Pflichten nur mit Bedingung (Weitergabe, Netzwerkdienst)
+    "/if you change or redistribute|wer \S+ ändert oder weitergibt|preserve the required notices/i|EUPL-Pflichten ohne Bedingung: Satz aus dem Lizenz-Baustein verwenden"
 )
 
 # Optional: höchstens so viele farbige Hinweisboxen (> [!WARNING] usw.) je
@@ -115,6 +117,11 @@ INTERNAL_VARIABLES=(
 #   "./README.md"         mit "/": genau dort, "./" heißt Projekt-Root
 #   "./docs/**/*.md"      Muster: mindestens ein Treffer
 REQUIRED=(
+    "README.md"
+    "README.de.md"
+    "LICENSE"
+    "LICENSE.de.txt"
+    "LICENSING.md"
 )
 
 # ─── Abhängige Dateien und Screenshots ─────────────────────────────────────────
