@@ -7,3 +7,7 @@
 # ProjectTools (docs-check, repo-status). pipx braucht den vollen Release-Tag;
 # die Mindestversion ist dessen SemVer-Teil (make info, make hints).
 PROJECTTOOLS_TAG=v0.3.2+261029.1600.c7bbd
+
+# BashLib (version und tag-* im Makefile). Wer BashLib selbst ändert,
+# installiert die Arbeitskopie mit pipx install -e; dann gilt die Version dort.
+BASHLIB_TAG=v0.1.0

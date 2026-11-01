@@ -18,6 +18,8 @@
 # Muster. Ein Muster ohne Treffer ist ein Problem.
 DOCS=(
     "README.md"
+    "README.de.md"
+    "docs"
 )
 
 # Interne Doku, die nur auf tote Links, fehlende Bilder und Anker geprüft
@@ -78,7 +80,10 @@ MAX_ALERTS=""
 # Datei vorkommen, z. B. aus einer eingebundenen, nicht versionierten
 # Bibliothek. Je Eintrag optional mit "|<grund>".
 KNOWN_VARIABLES=(
-    # "NO_COLOR|Standard der Kommandozeile, schaltet Farben ab"
+    "NAME_TAG|Platzhalter: NAME steht für das Präfix eines Werkzeugs in .dev-tools.conf.sh"
+    "NAME_SOURCE|Platzhalter: NAME steht für das Präfix eines Werkzeugs in .dev-tools.conf.sh"
+    "NAME_EDITABLE|Platzhalter: NAME steht für das Präfix eines Werkzeugs in .dev-tools.conf.sh"
+    "NAME_LABEL|Platzhalter: NAME steht für das Präfix eines Werkzeugs in .dev-tools.conf.sh"
 )
 
 # Make-Targets, die die Doku nennen darf, obwohl kein Makefile im Projekt sie
@@ -93,6 +98,7 @@ KNOWN_MAKE_TARGETS=(
 # liest (process.env.X, os.environ["X"], getenv("X") u. a.), muss in einem
 # Dokument aus DOCS stehen; sonst ist das ein Problem. Tests zählen nicht.
 CODE_VARIABLES=(
+    "src"
 )
 
 # Vom Code gelesen, aber bewusst nicht dokumentiert, je mit "|<grund>".
@@ -153,7 +159,7 @@ SCREENSHOTS_EXCLUDE=(
 # Hinweis, nach <tage> Tagen ein Problem; 0 heißt: im selben Commit. Die Basis
 # darf ein Ordner, ein Muster oder eine Liste mit Komma sein.
 DEPENDS=(
-    # "README.md|README.de.md|3|deutsche Fassung"
+    "README.md|README.de.md|3|deutsche Fassung"
 )
 
 # Gleiches Format, auch überfällig nur ein Hinweis: für Basen, die sich oft
@@ -167,4 +173,5 @@ DEPENDS_HINT=(
 # Anzahl), Hinweisboxen und Absätze. Fehlt in einer Fassung ein Teil, ist das
 # ein Problem. Den übersetzten Text selbst prüft das nicht.
 TRANSLATIONS=(
+    "README.md|README.de.md|deutsche Fassung"
 )

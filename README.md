@@ -1,15 +1,131 @@
+<div align="center">
+
 # DevTools
 
-The package `mmit-devtools` will check, show and install the development
-tools a project lists in `.dev-tools.conf.sh`. It is not written yet; so far
-the repository only holds its development setup.
+**Check, show and install the development tools of a project with pipx**
+
+[Example](#example) · [Quick start](#quick-start) · [Config file](#config-file) · [Commands](#commands) · [Development](docs/development.md)
+
+English · [Deutsch](README.de.md)
+
+</div>
+
+DevTools reads the development tools a project needs from its
+`.dev-tools.conf.sh`: for each tool the pipx package, the release tag and the
+source, either a Git URL or a local working copy. The command `devtools`
+shows what is installed, brings every tool to its source and tag with pipx
+and checks the minimum version, the same way in every project instead of in
+each Makefile.
+
+## Contents
+
+- [Example](#example)
+- [Features](#features)
+- [Quick start](#quick-start)
+- [Config file](#config-file)
+- [Commands](#commands)
+- [Development](#development)
+
+## Example
+
+```console
+$ devtools install
+  ProjectTools  aktuell (0.3.2)
+  BashLib       aktualisiert von 0.1.0 auf 0.2.0 (git+https://github.com/MikeMitterer/bash-lib.git)
+```
+
+One line per tool: current, updated from one version to another, installed,
+or a working copy. The output is in German.
+
+[↑ Contents](#contents)
+
+## Features
+
+- **One config file:** tools, pipx packages, tags and sources in
+  `.dev-tools.conf.sh`, readable by Make and Bash as well.
+- **Git or working copy:** a tool comes from a Git URL at the tag, or from a
+  local checkout, editable (`pipx install -e`) or as a fixed copy.
+- **Working copies stay:** if you installed a working copy yourself while the
+  config asks for Git, `devtools install` leaves it alone and says so.
+- **Correct version of a working copy:** pipx freezes the package version of
+  an editable install; DevTools reads the version from the working copy's
+  `pyproject.toml` instead.
+- **Minimum version check:** `devtools check NAME` fails with the install
+  command, ready for a Makefile.
+- **Standard library only:** Python 3.11 or later, no further packages.
+
+[↑ Contents](#contents)
+
+## Quick start
+
+Requirements: Python 3.11 or later and [pipx](https://pipx.pypa.io/).
+
+Tags follow the scheme `vX.Y.Z+YYMMDD.HHMM.hash`, and pipx needs the full
+tag. This command shows the latest one:
+
+```bash
+git ls-remote --tags --refs --sort=-v:refname https://github.com/MikeMitterer/python-devtools.git | head -1
+```
+
+**Without installing:** run DevTools directly from Git in the project folder,
+replacing `<release-tag>` with the tag:
+
+```bash
+pipx run --spec 'git+https://github.com/MikeMitterer/python-devtools.git@<release-tag>' devtools status
+```
+
+**Installed:** install it once, then use `devtools` in every project.
+
+```bash
+pipx install 'git+https://github.com/MikeMitterer/python-devtools.git@<release-tag>'
+devtools install
+```
+
+[↑ Contents](#contents)
+
+## Config file
+
+`devtools` reads `.dev-tools.conf.sh` in the current folder; `--config`
+names another file. Each line is `NAME=value` without quotes and without
+spaces around `=`, so that Make can include the file and Bash can source it.
+`#` starts a comment. Every `NAME_PACKAGE` makes `NAME` a tool; the other
+entries use the same prefix.
+
+```bash
+PROJECTTOOLS_PACKAGE=mmit-projecttools
+PROJECTTOOLS_LABEL=ProjectTools
+PROJECTTOOLS_TAG=v0.3.2+261029.1600.c7bbd
+PROJECTTOOLS_SOURCE=git+https://github.com/MikeMitterer/bash-ProjectTools.git
+PROJECTTOOLS_EDITABLE=yes
+```
+
+| Entry | Required | Meaning |
+|---|---|---|
+| `NAME_PACKAGE` | yes | pipx package of the tool, for example `mmit-projecttools` |
+| `NAME_TAG` | yes | Release tag; its `X.Y.Z` part is the minimum version |
+| `NAME_SOURCE` | yes | Git URL (installed at the tag) or path of a working copy, relative to the config file |
+| `NAME_EDITABLE` | no | For a working copy: `yes` installs it editable (`pipx install -e`), `no` as a fixed copy; default `yes` |
+| `NAME_LABEL` | no | Name in the output; default the package name |
+
+[↑ Contents](#contents)
+
+## Commands
+
+| Command | Does |
+|---|---|
+| `devtools status` | Shows each tool's state and what `install` would do; installs nothing |
+| `devtools install` | Installs missing or older tools from source and tag (`pipx install --force`) |
+| `devtools check NAME` | Exit 0 if the installed version reaches the tag's version, otherwise exit 1 with the install command |
+| `devtools command NAME` | Prints the install command for the tool |
+
+`NAME` is the prefix of the entries in lower case, for example
+`projecttools`. `devtools --help` shows all options.
+
+[↑ Contents](#contents)
 
 ## Development
 
-```bash
-make setup   # set up a fresh checkout (Git hooks); safe to run again
-make check   # full check: shellcheck and docs-check
-```
+Setting up from the checkout, tests and releases are described in the
+[developer documentation](docs/development.md) (German).
 
-`make check` needs ProjectTools installed with pipx; `make hints` shows the
-command and the order for a first start.
+[↑ Contents](#contents)
