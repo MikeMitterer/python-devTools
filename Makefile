@@ -13,15 +13,11 @@ PROJECT_NAME := $(shell basename -- $(WORKSPACE_SQ))
 export WORKSPACE WORKSPACE_SQ PROJECT_NAME MSG
 
 # Paket, Release-Tag und Quelle der pipx-Werkzeuge stehen nur in .dev-tools.conf.sh (Format von
-# devtools); selbst entwickelt: make hints.
-include .dev-tools.conf.sh
-PROJECTTOOLS_MIN     := $(patsubst v%,%,$(firstword $(subst +, ,$(PROJECTTOOLS_TAG))))
-PROJECTTOOLS_INSTALL := pipx install --force '$(PROJECTTOOLS_SOURCE)@$(PROJECTTOOLS_TAG)'
-PROJECTTOOLS_FOUND    = $(shell projecttools --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
-BASHLIB_INSTALL      := pipx install --force '$(BASHLIB_SOURCE)@$(BASHLIB_TAG)'
+# devtools). Prüfen, zeigen und installieren übernimmt devtools (DEVTOOLS unten); selbst
+# entwickelt: make hints.
 
 # BashLib für version und tag-* (Maintainer): ein von außen gesetztes BASH_LIBS geht vor,
-# sonst bashlib-path aus der pipx-Installation.
+# sonst bashlib-path aus der pipx-Installation. Die Version prüft devtools in beiden Fällen.
 ifndef BASH_LIBS
 BASH_LIBS := $(shell bashlib-path 2>/dev/null)
 endif
@@ -58,6 +54,12 @@ RUFF   := $(VENV)/bin/ruff
 # pybabel über Python statt über sein Skript: pip schreibt in Skripte eine sh-Zeile, die einen
 # Checkout-Pfad mit $(…) auswerten würde.
 PYBABEL := $(PYTHON) -m babel.messages.frontend
+# devtools aus der .venv (make setup), ebenfalls über Python. Der pre-commit-Hook prüft in einer
+# Kopie ohne .venv und nennt den Interpreter in DEVTOOLS_PYTHON; als Wert von außen nur über die
+# Umgebung gelesen ("$${…}").
+DEVTOOLS     = "$${DEVTOOLS_PYTHON:-$(PYTHON)}" -m mmit_devtools.cli
+HAS_DEVTOOLS = "$${DEVTOOLS_PYTHON:-$(PYTHON)}" -c 'import mmit_devtools' 2>/dev/null
+NO_DEVTOOLS  = echo -e "  $(RED)✗$(RESET) devtools fehlt, erst einrichten: $(YELLOW)make setup$(RESET)" >&2; exit 1
 # Was setup herstellt und require-setup prüft: Paket und Werkzeuge in der .venv und die .mo.
 CATALOGS     := $(patsubst %.po,%.mo,$(wildcard src/mmit_devtools/locale/*/LC_MESSAGES/*.po))
 SETUP_STAMPS := $(VENV)/.installed $(CATALOGS)
@@ -87,9 +89,11 @@ info: ## Umgebung, Pfade und Werkzeugversionen anzeigen
 		WORKSPACE "$${WORKSPACE}" \
 		PYTHON_BOOTSTRAP '$(PYTHON_BOOTSTRAP)' \
 		VENV '$(VENV)' \
-		ProjectTools '$(or $(PROJECTTOOLS_FOUND),fehlt) (verlangt ab $(PROJECTTOOLS_MIN))' \
 		BASH_LIBS "$${BASH_LIBS:-nicht gesetzt}" \
 		DEV_MAKE "$${DEV_MAKE:-nicht gesetzt}"
+	@echo
+	@echo "$(THEME_INDENT_GROUP)$(THEME_COLOR_GROUP)Werkzeuge (.dev-tools.conf.sh)$(RESET)"
+	@if $(HAS_DEVTOOLS); then $(DEVTOOLS) status || true; else echo "  devtools noch nicht eingerichtet: make setup"; fi
 	@echo
 
 # Repo-Adresse aus git remote origin (SSH oder HTTPS) als https-URL, und der letzte Release-Tag.
@@ -130,8 +134,9 @@ hints: ## Reihenfolge für den ersten Start und Installationswege anzeigen
 	@$(call hint_row,Arbeitskopie,pipx install -e $${WORKSPACE_SQ})
 	@echo
 	@echo "$(THEME_INDENT_GROUP)$(THEME_COLOR_GROUP)Werkzeuge$(RESET)"
-	@$(call hint_row,ProjectTools ab $(PROJECTTOOLS_MIN),$(PROJECTTOOLS_INSTALL))
-	@$(call hint_row,BashLib (Maintainer),$(BASHLIB_INSTALL))
+	@$(call hint_row,Alle,make install-tools)
+	@cmd=$$($(DEVTOOLS) command projecttools 2>/dev/null) || cmd="nach make setup: make hints"; $(call hint_row,ProjectTools,$$cmd)
+	@cmd=$$($(DEVTOOLS) command bashlib 2>/dev/null) || cmd="nach make setup: make hints"; $(call hint_row,BashLib (Maintainer),$$cmd)
 	@echo
 	@echo "$(THEME_INDENT_GROUP)$(THEME_COLOR_GROUP)Werkzeuge selbst entwickeln$(RESET)"
 	@$(call tool_checkout,PROJECT_TOOLS,mmit-projecttools); $(call hint_row,ProjectTools,$$checkout)
@@ -143,24 +148,21 @@ hints: ## Reihenfolge für den ersten Start und Installationswege anzeigen
 
 # ─── Precheck ────────────────────────────────────────────────────────────────
 
-# Ohne Hilfeeintrag: läuft vor version und tag-*. Verlangt BashLib und nennt sonst den
-# Installationsweg.
+# Ohne Hilfeeintrag: läuft vor version und tag-*. Verlangt eine lesbare BashLib und die Mindestversion
+# aus .dev-tools.conf.sh, auch bei BASH_LIBS von außen; nennt sonst den Installationsweg. Ist die
+# Arbeitskopie hinter BASH_LIBS bearbeitbar mit pipx installiert, zählt ihre pyproject.toml.
 .PHONY: precheck
 precheck:
 	@test -r "$${BASH_LIBS}/version.lib.sh" || { \
-		echo -e "  $(RED)✗$(RESET) Nur für Maintainer: benötigt BashLib ($(YELLOW)BASH_LIBS$(RESET))." >&2; \
-		echo -e "    $(BASHLIB_INSTALL)" >&2; \
+		echo -e "  $(RED)✗$(RESET) Nur für Maintainer: benötigt BashLib ($(YELLOW)BASH_LIBS$(RESET)): $(YELLOW)make install-tools$(RESET)" >&2; \
 		exit 1; }
+	@$(HAS_DEVTOOLS) || { $(NO_DEVTOOLS); }; $(DEVTOOLS) check bashlib
 
-# Ohne Hilfeeintrag: verlangt ProjectTools in Mindestversion und nennt sonst den Installationsbefehl.
+# Ohne Hilfeeintrag: verlangt ProjectTools in der Mindestversion aus .dev-tools.conf.sh; devtools
+# nennt sonst den Installationsbefehl.
 .PHONY: require-tools
 require-tools:
-	@found='$(PROJECTTOOLS_FOUND)'; \
-	if [[ -z "$$found" ]]; then problem='fehlt'; \
-	elif [[ "$$(printf '%s\n' '$(PROJECTTOOLS_MIN)' "$$found" | sort -V | head -1)" != '$(PROJECTTOOLS_MIN)' ]]; then problem="$$found ist zu alt"; \
-	else exit 0; fi; \
-	printf '  $(RED)✗$(RESET) ProjectTools %s (verlangt ab %s): $(YELLOW)%s$(RESET)\n' "$$problem" '$(PROJECTTOOLS_MIN)' "$(PROJECTTOOLS_INSTALL)" >&2; \
-	exit 1
+	@$(HAS_DEVTOOLS) || { $(NO_DEVTOOLS); }; $(DEVTOOLS) check projecttools
 
 # ─── Setup ───────────────────────────────────────────────────────────────────
 
@@ -169,8 +171,15 @@ require-tools:
 # Der einzige Einrichtungsweg, auch für agent-lessons (worktree_setup). Wiederholbar: die .venv
 # gleicht er nur ab, wenn pyproject.toml neuer ist als die Stempeldatei.
 .PHONY: setup
-setup: $(SETUP_STAMPS) ## Git-Hooks, .venv mit dem Paket und den Prüfwerkzeugen, Übersetzungen einrichten
+setup: $(SETUP_STAMPS) ## Git-Hooks, .venv mit dem Paket und den Prüfwerkzeugen, Übersetzungen einrichten; zeigt den Stand der Werkzeuge
 	@git config core.hooksPath .githooks   # pre-commit: make docs-check
+	@# Nur zeigen, nichts installieren: setup läuft auch in Workspaces und im Prüf-Worktree.
+	@$(DEVTOOLS) status || echo -e "  $(YELLOW)⚠$(RESET) Stand der Werkzeuge nicht lesbar (make hints)"
+
+# Werkzeuge auf Quelle und Tag aus .dev-tools.conf.sh; eine selbst installierte Arbeitskopie bleibt.
+.PHONY: install-tools
+install-tools: require-setup ## Werkzeuge aus .dev-tools.conf.sh mit pipx installieren oder aktualisieren
+	@$(DEVTOOLS) install
 
 # Stempeldatei: nur setup legt sie an. Nicht .venv/bin/python als Ziel nehmen; es ist ein Link
 # aufs System-Python und hätte dessen Zeitstempel.
