@@ -103,6 +103,7 @@ CODE_VARIABLES=(
 
 # Vom Code gelesen, aber bewusst nicht dokumentiert, je mit "|<grund>".
 INTERNAL_VARIABLES=(
+    "DEVTOOLS_LOCALE_DIR|nur für die Tests: anderer Katalogordner statt der .mo im Paket"
 )
 
 # ─── Dateien, die es geben muss ────────────────────────────────────────────────

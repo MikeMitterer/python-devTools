@@ -1,6 +1,14 @@
 """devtools status, install, check und command gegen den pipx-Ersatz aus conftest."""
 
+from pathlib import Path
+
+from babel.messages.mofile import write_mo
+from babel.messages.pofile import read_po
 from conftest import GIT_BASHLIB, GIT_TOOLS, venv
+
+CATALOG = (
+    Path(__file__).resolve().parents[1] / "src/mmit_devtools/locale/de/LC_MESSAGES/mmit-devtools.po"
+)
 
 BASHLIB_GIT_CALL = ["install", "--force", f"{GIT_BASHLIB}@v0.2.0+261031.2038.b22f0"]
 
@@ -138,7 +146,12 @@ def test_without_command_shows_help(sandbox):
 
 
 def test_output_follows_language(sandbox):
-    """Mit LANGUAGE=de kommen Zeilen, Fehler und Hilfe aus dem deutschen Katalog."""
+    """Mit LANGUAGE=de kommen Zeilen, Fehler und Hilfe aus dem deutschen Katalog, hier eigens
+    aus der .po des Quellbaums übersetzt."""
+    target = sandbox.root / "locale" / "de" / "LC_MESSAGES" / "mmit-devtools.mo"
+    target.parent.mkdir(parents=True)
+    with CATALOG.open("rb") as source, target.open("wb") as stream:
+        write_mo(stream, read_po(source, locale="de"))
     result, _ = sandbox.run("install", env={"LANGUAGE": "de"})
     assert "ProjectTools  aktuell (0.3.2)" in result.stdout, result.stdout
     assert "BashLib       aktualisiert von 0.1.0 auf 0.2.0" in result.stdout, result.stdout

@@ -92,6 +92,8 @@ class Sandbox:
         conf.write_text("".join(f"{key}={value}\n" for key, value in self.config.items()))
         environment = {
             "PATH": f"{self.root / 'bin'}:/usr/bin:/bin",
+            # Nie die .mo aus dem Quellbaum: ein leerer Katalogordner, also Englisch.
+            "DEVTOOLS_LOCALE_DIR": str(self.root / "locale"),
             "PIPX_PYTHON": sys.executable,
             "PIPX_SCRIPT": str(self.root / "bin" / "fake_pipx.py"),
             "PIPX_STATE": str(self.root / "state.json"),
