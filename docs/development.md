@@ -22,9 +22,17 @@ Interpreter geht mit `PYTHON_BOOTSTRAP=…`. Zur Laufzeit braucht das Paket
 nur die Standardbibliothek.
 
 Die Prüfungen brauchen ProjectTools (`docs-check`, `repo-status`,
-`changelog`), Releases zusätzlich BashLib, beide über pipx. Die verlangten
-Release-Tags stehen in `.dev-tools.conf.sh`; `make hints` nennt die
-Installationsbefehle, `make info` die gefundenen Versionen.
+`changelog`), Releases zusätzlich BashLib, beide über pipx. Paket, Tag und
+Quelle stehen in `.dev-tools.conf.sh`. Geprüft und gezeigt werden sie mit
+`devtools` aus der `.venv`, also erst nach `make setup`: `make setup` und
+`make info` zeigen den Stand, `make hints` die Installationsbefehle, und
+
+```bash
+make install-tools
+```
+
+bringt beide auf Quelle und Tag; eine selbst installierte Arbeitskopie bleibt
+dabei unberührt.
 
 [↑ Übersicht](#übersicht)
 

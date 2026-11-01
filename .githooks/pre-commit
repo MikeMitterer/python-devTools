@@ -31,10 +31,13 @@ if [[ -n "${GIT_INDEX_FILE:-}" && "${GIT_INDEX_FILE}" != /* ]]; then
     export GIT_INDEX_FILE="${ROOT}/${GIT_INDEX_FILE}"
 fi
 
-# Ohne ProjectTools nur warnen: make check bleibt die harte Grenze, ein Commit
-# auf einem Rechner ohne die Werkzeuge soll nicht daran scheitern.
+# devtools prüft die Werkzeuge, auch in der Kopie unten, die keine .venv hat.
+export DEVTOOLS_PYTHON="${ROOT}/.venv/bin/python"
+
+# Ohne devtools oder ProjectTools nur warnen: make check bleibt die harte Grenze,
+# ein Commit auf einem Rechner ohne die Werkzeuge soll nicht daran scheitern.
 if ! make --no-print-directory -s require-tools 2>/dev/null; then
-    echo "  ⚠ ProjectTools fehlt oder ist zu alt — Doku nicht geprüft (make hints)"
+    echo "  ⚠ devtools oder ProjectTools fehlt oder ist zu alt — Doku nicht geprüft (make setup, make hints)"
     exit 0
 fi
 
