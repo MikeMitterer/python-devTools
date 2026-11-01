@@ -17,10 +17,9 @@ export WORKSPACE WORKSPACE_SQ PROJECT_NAME MSG
 # entwickelt: make hints.
 
 # BashLib für version und tag-* (Maintainer): ein von außen gesetztes BASH_LIBS geht vor,
-# sonst bashlib-path aus der pipx-Installation; nur deren Version prüft devtools.
+# sonst bashlib-path aus der pipx-Installation. Die Version prüft devtools in beiden Fällen.
 ifndef BASH_LIBS
 BASH_LIBS := $(shell bashlib-path 2>/dev/null)
-BASHLIB_FROM_PIPX := $(if $(BASH_LIBS),yes)
 endif
 export BASH_LIBS
 
@@ -149,14 +148,15 @@ hints: ## Reihenfolge für den ersten Start und Installationswege anzeigen
 
 # ─── Precheck ────────────────────────────────────────────────────────────────
 
-# Ohne Hilfeeintrag: läuft vor version und tag-*. Verlangt BashLib, aus pipx in der Mindestversion
-# aus .dev-tools.conf.sh, und nennt sonst den Installationsweg.
+# Ohne Hilfeeintrag: läuft vor version und tag-*. Verlangt eine lesbare BashLib und die Mindestversion
+# aus .dev-tools.conf.sh, auch bei BASH_LIBS von außen; nennt sonst den Installationsweg. Ist die
+# Arbeitskopie hinter BASH_LIBS bearbeitbar mit pipx installiert, zählt ihre pyproject.toml.
 .PHONY: precheck
 precheck:
 	@test -r "$${BASH_LIBS}/version.lib.sh" || { \
 		echo -e "  $(RED)✗$(RESET) Nur für Maintainer: benötigt BashLib ($(YELLOW)BASH_LIBS$(RESET)): $(YELLOW)make install-tools$(RESET)" >&2; \
 		exit 1; }
-	@[[ -z '$(BASHLIB_FROM_PIPX)' ]] || { $(HAS_DEVTOOLS) || { $(NO_DEVTOOLS); }; $(DEVTOOLS) check bashlib; }
+	@$(HAS_DEVTOOLS) || { $(NO_DEVTOOLS); }; $(DEVTOOLS) check bashlib
 
 # Ohne Hilfeeintrag: verlangt ProjectTools in der Mindestversion aus .dev-tools.conf.sh; devtools
 # nennt sonst den Installationsbefehl.
