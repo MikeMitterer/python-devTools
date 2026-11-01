@@ -284,13 +284,13 @@ endef
 # require-tools vor precheck: ohne ProjectTools bricht ein Release vor dem Bump ab, nicht erst
 # nach dem gepushten Tag.
 .PHONY: tag-major
-tag-major: require-tools precheck ## Version committen, taggen UND pushen, dann Changelog — Major  [MSG="..."] — Maintainer
+tag-major: require-tools precheck ## Major-Release  [MSG="..."] — Maintainer
 	$(call release,major)
 
 .PHONY: tag-minor
-tag-minor: require-tools precheck ## Version committen, taggen UND pushen, dann Changelog — Minor  [MSG="..."] — Maintainer
+tag-minor: require-tools precheck ## Minor-Release  [MSG="..."] — Maintainer
 	$(call release,minor)
 
 .PHONY: tag-patch
-tag-patch: require-tools precheck ## Version committen, taggen UND pushen, dann Changelog — Patch  [MSG="..."] — Maintainer
+tag-patch: require-tools precheck ## Patch-Release  [MSG="..."] — Maintainer
 	$(call release,patch)
