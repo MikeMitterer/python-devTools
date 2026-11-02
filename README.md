@@ -60,6 +60,10 @@ locale (`LANGUAGE`, `LC_ALL`, `LANG`).
   command, ready for a Makefile.
 - **Standard library only:** Python 3.14 or later, no further packages at
   runtime.
+- **Colors on request:** with the extra `theme`, the output takes the colors
+  of the shared [CLITheme](https://github.com/MikeMitterer/python-clitheme),
+  in a terminal only and never with `NO_COLOR`; without it, the output stays
+  plain text.
 
 [↑ Contents](#contents)
 
@@ -86,6 +90,12 @@ pipx run --spec 'git+https://github.com/MikeMitterer/python-devtools.git@<releas
 ```bash
 pipx install 'git+https://github.com/MikeMitterer/python-devtools.git@<release-tag>'
 devtools install
+```
+
+**With colors:** the extra `theme` also installs CLITheme and rich.
+
+```bash
+pipx install 'mmit-devtools[theme] @ git+https://github.com/MikeMitterer/python-devtools.git@<release-tag>'
 ```
 
 [↑ Contents](#contents)
