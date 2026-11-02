@@ -117,6 +117,17 @@ PROJECTTOOLS_EDITABLE=yes
 | `NAME_EDITABLE` | nein | Für eine Arbeitskopie: `yes` bindet sie bearbeitbar ein (`pipx install -e`), `no` als festen Stand; Vorgabe `yes` |
 | `NAME_LABEL` | nein | Name in der Ausgabe; Vorgabe der Paketname |
 
+**Gepinnter Tag:** `NAME_TAG` und `NAME_SOURCE` ohne `NAME_PACKAGE` halten
+einen Tag fest, den DevTools nicht installiert, etwa die Version, die ein
+Makefile mit `pipx run` startet. `devtools upgrade` zeigt seinen neuesten Tag
+und schreibt ihn mit `--write`; die übrigen Befehle übergehen ihn. Ohne
+`NAME_SOURCE` lässt sich der neueste Tag nicht finden.
+
+```bash
+DEVTOOLS_TAG=v0.2.0+261101.1319.09840
+DEVTOOLS_SOURCE=git+https://github.com/MikeMitterer/python-devtools.git
+```
+
 [↑ Übersicht](#übersicht)
 
 ## Befehle
@@ -139,11 +150,15 @@ Tags ihres Repos; die Arbeitskopie selbst holt und ändert es nie, und ohne
 lesbaren Tag bleibt sie einfach beim Tag der Config. Eine
 bearbeitbare Arbeitskopie ist schon live eingebunden, dort gibt es nichts zu
 installieren. Ist eine Quelle nicht lesbar, nennt die Zeile den Grund, die
-übrigen Werkzeuge laufen weiter, und `upgrade` endet mit Exit 1. `--write`
-schreibt nur einen Tag, den die installierte Version danach erreicht, sonst
-scheiterte `devtools check`; die Ausgabe nennt jeden Tag, der bleibt. Ohne
-`--write` bleibt die Config, wie sie ist; die Ausgabe sagt dann, dass sie noch
-ältere Tags nennt. Steht DevTools selbst in der Config, kommt es zuletzt dran,
+übrigen Werkzeuge laufen weiter, und `upgrade` endet mit Exit 1.
+
+Mit `--write` trägt `upgrade` die neueren Tags in die Config ein und nennt je
+`NAME_TAG`, was geschah: alt → neu, aktuell oder warum er bleibt. Den Tag
+eines Werkzeugs schreibt es nur, wenn die installierte Version ihn danach
+erreicht, sonst scheiterte `devtools check`. Ohne `--write` bleibt die Config,
+wie sie ist; die Ausgabe sagt dann, dass sie noch ältere Tags nennt. Ein
+`NAME_TAG` ohne `NAME_SOURCE` bekommt eine eigene Zeile, weil sein neuester
+Tag unbekannt ist. Steht DevTools selbst in der Config, kommt es zuletzt dran,
 weil pipx dabei die Umgebung ersetzt, aus der es läuft.
 
 [↑ Übersicht](#übersicht)

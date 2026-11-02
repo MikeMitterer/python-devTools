@@ -2,13 +2,16 @@
 
 Die Datei ist zugleich Make- und Bash-Syntax: NAME=wert ohne Anführungszeichen und ohne
 Leerzeichen um das =. Ein # beginnt wie in Make überall einen Kommentar. Jedes NAME_PACKAGE
-macht NAME zu einem Werkzeug; die Reihenfolge der Datei gilt.
+macht NAME zu einem Werkzeug; die Reihenfolge der Datei gilt. NAME_TAG mit NAME_SOURCE, aber
+ohne NAME_PACKAGE ist ein gepinnter Tag, etwa für pipx run: upgrade aktualisiert ihn, installiert
+aber nichts.
 """
 
 import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TypeVar
 
 from mmit_devtools.i18n import _
 from mmit_devtools.versions import semver
@@ -39,15 +42,13 @@ def is_git(source: str) -> bool:
 
 
 @dataclass(frozen=True)
-class Tool:
-    """Was die Config für ein Werkzeug verlangt."""
+class Pin:
+    """Ein Tag mit Quelle: NAME_TAG und NAME_SOURCE der Config."""
 
     name: str
-    package: str
     label: str
     tag: str
     source: str
-    editable: bool
 
     @property
     def local(self) -> bool:
@@ -58,6 +59,18 @@ class Tool:
     def minimum(self) -> str | None:
         """Mindestversion: der SemVer-Teil des Tags."""
         return semver(self.tag)
+
+
+# Ein Pin oder Tool; Funktionen für beide geben die Art zurück, die sie bekommen.
+AnyPin = TypeVar("AnyPin", bound=Pin)
+
+
+@dataclass(frozen=True)
+class Tool(Pin):
+    """Was die Config für ein Werkzeug verlangt: dazu pipx-Paket und Einbindung."""
+
+    package: str
+    editable: bool
 
     def command(self) -> list[str]:
         """pipx-Aufruf, der das Werkzeug auf Quelle und Tag bringt."""
@@ -122,11 +135,33 @@ def tool(path: Path, entries: dict[str, str], prefix: str) -> Tool:
         return value
 
     package, tag, source = required("PACKAGE"), required("TAG"), required("SOURCE")
-    if not is_git(source):
-        source = str((path.parent / os.path.expanduser(source)).resolve())
     editable = entries.get(f"{prefix}_EDITABLE", "yes").lower()
     if editable not in YES + NO:
         text = _("{path}: {key} is {value}, allowed are yes and no")
         raise ConfigError(text.format(path=path, key=f"{prefix}_EDITABLE", value=repr(editable)))
     label = entries.get(f"{prefix}_LABEL") or package
-    return Tool(prefix.lower(), package, label, tag, source, editable in YES)
+    return Tool(prefix.lower(), label, tag, absolute(path, source), package, editable in YES)
+
+
+def absolute(path: Path, source: str) -> str:
+    """Git-URL unverändert, ein Pfad ab dem Ordner der Config."""
+    if is_git(source):
+        return source
+    return str((path.parent / os.path.expanduser(source)).resolve())
+
+
+def load_pins(path: Path) -> tuple[list[Pin], list[str]]:
+    """Gepinnte Tags (NAME_TAG und NAME_SOURCE ohne NAME_PACKAGE) und die NAME_TAG ohne Quelle."""
+    entries = read_entries(path)
+    pins, unsourced = [], []
+    for key in entries:
+        prefix = key.removesuffix("_TAG")
+        if not key.endswith("_TAG") or f"{prefix}_PACKAGE" in entries or not entries[key]:
+            continue
+        source = entries.get(f"{prefix}_SOURCE")
+        if not source:
+            unsourced.append(key)
+            continue
+        label = entries.get(f"{prefix}_LABEL") or prefix.lower()
+        pins.append(Pin(prefix.lower(), label, entries[key], absolute(path, source)))
+    return pins, unsourced

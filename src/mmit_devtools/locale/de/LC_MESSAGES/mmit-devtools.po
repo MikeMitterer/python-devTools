@@ -143,3 +143,18 @@ msgstr "{state} → devtools upgrade"
 
 msgid "{key} stays at {old}: installed {version} does not reach {new}"
 msgstr "{key} bleibt bei {old}: installiert ist {version}, das erreicht {new} nicht"
+
+msgid "pinned {old}, newest {new}"
+msgstr "gepinnt {old}, neuester {new}"
+
+msgid "pinned, current ({tag})"
+msgstr "gepinnt, aktuell ({tag})"
+
+msgid "{key} current ({tag})"
+msgstr "{key} aktuell ({tag})"
+
+msgid "{key} has no {source}: its newest tag is unknown"
+msgstr "{key} hat kein {source}: sein neuester Tag ist unbekannt"
+
+msgid "{state} → devtools upgrade --write"
+msgstr "{state} → devtools upgrade --write"

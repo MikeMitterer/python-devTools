@@ -16,5 +16,5 @@ PROJECTTOOLS_SOURCE=git+https://github.com/MikeMitterer/bash-ProjectTools.git
 # installiert die Arbeitskopie mit pipx install -e; dann gilt die Version dort.
 BASHLIB_PACKAGE=mmit-bashlib
 BASHLIB_LABEL=BashLib
-BASHLIB_TAG=v0.1.0
+BASHLIB_TAG=v0.2.0+261031.2038.b22f0
 BASHLIB_SOURCE=git+https://github.com/MikeMitterer/bash-lib.git
