@@ -90,3 +90,21 @@ def test_finish_ends_each_written_stream_with_one_blank_line(theme):
     assert silent.getvalue() == ""
     style.finish()
     assert out.getvalue() == PLAIN * 2 + "\n", "ein zweiter Abschluss ohne neue Ausgabe"
+
+
+def test_emit_writes_through_cli_theme_without_wrapping(theme, monkeypatch):
+    """T-11: emit schreibt über Output.write(..., wrap=False) von CLITheme und fasst dessen
+    Vormerkung für finish nicht selbst an."""
+    out = style.themed()
+    seen = []
+    original = type(out).write
+
+    def spy(self, text, stream=None, hang=0, wrap=True):
+        seen.append(wrap)
+        original(self, text, stream, hang, wrap)
+
+    monkeypatch.setattr(type(out), "write", spy)
+    stream = io.StringIO()
+    style.emit(PARTS, stream)
+    assert seen == [False]
+    assert stream.getvalue() == PLAIN

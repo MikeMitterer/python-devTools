@@ -19,10 +19,10 @@ Homepage = "https://github.com/MikeMitterer/python-devtools"
 
 [project.optional-dependencies]
 # Farbige Ausgabe nach dem gemeinsamen CLI-Theme und die Leerzeile am Ende jeder Ausgabe (ab
-# CLITheme 0.3.0, T-10); ohne das Extra bleibt die Ausgabe reiner Text ohne diesen Abschluss.
+# CLITheme 0.4.0: Schreiben ohne Umbruch, T-11); ohne das Extra bleibt die Ausgabe reiner Text ohne diesen Abschluss.
 # CLITheme führt mmit-devtools nie als Abhängigkeit (kein Zirkel, T-7).
 theme = [
-    "mmit-cli-theme @ git+https://github.com/MikeMitterer/python-clitheme.git@v0.3.0+261102.1724.ca51d",
+    "mmit-cli-theme @ git+https://github.com/MikeMitterer/python-clitheme.git@v0.4.0+261102.1800.5c1a8",
 ]
 # Entwicklung: Tests, Lint und Kataloge (make setup); die Tests prüfen auch die Farben (theme)
 dev = ["mmit-devtools[theme]", "pytest", "ruff", "Babel==2.18.0"]

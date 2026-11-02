@@ -2,8 +2,9 @@
 
 Eine Zeile besteht aus Teilen mit Rolle des Themes (head, key, val, hint, ok, warn, err, mark)
 oder ohne Rolle. Ob Farben erscheinen, entscheidet die Konsole von CLITheme: nur im Terminal, nie
-mit NO_COLOR oder TERM=dumb. Umbrochen wird nie: Eine Zeile wie der Installationsbefehl von check
-bleibt zum Kopieren eine Zeile, das Terminal bricht sie nur weich um.
+mit NO_COLOR oder TERM=dumb. Umbrochen wird nie (Output.write mit wrap=False): Eine Zeile wie
+der Installationsbefehl von check bleibt zum Kopieren eine Zeile, das Terminal bricht sie nur
+weich um.
 
 finish schließt nach der Regel von CLITheme ab: eine Leerzeile auf jedem Strom, der Ausgabe
 bekam. Parser ist dessen ArgumentParser, dessen Hilfe, Version und Fehler ebenso enden.
@@ -17,7 +18,6 @@ from typing import TextIO
 
 try:
     from cli_theme import ArgumentParser, Output
-    from cli_theme.output import console_for
     from rich.text import Text
 except ImportError:
     ArgumentParser = argparse.ArgumentParser
@@ -43,11 +43,8 @@ def emit(parts: list[Part], stream: TextIO | None = None) -> None:
     line = Text()
     for text, role in parts:
         line.append(text, style=out.styles.get(role, "") if role else "")
-    # Output.write bräche im Terminal hart um; deshalb hier drucken und den Strom wie
-    # Output.write für den Abschluss vormerken.
-    if not any(target is seen for seen in out.written):
-        out.written.append(target)
-    console_for(target).print(line, crop=False, overflow="ignore")
+    # wrap=False: nie hart umbrechen, damit etwa ein Befehl zum Kopieren eine Zeile bleibt.
+    out.write(line, target, wrap=False)
 
 
 def finish() -> None:
