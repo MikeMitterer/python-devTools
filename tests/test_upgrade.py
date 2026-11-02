@@ -1,0 +1,132 @@
+"""devtools upgrade: neuester Release-Tag je Werkzeug, Vorschau mit -n, Config mit --write."""
+
+import json
+
+from conftest import GIT_BASHLIB, GIT_TOOLS, venv
+
+BASHLIB_REMOTE = GIT_BASHLIB.removeprefix("git+")
+TOOLS_REMOTE = GIT_TOOLS.removeprefix("git+")
+NEWEST = "v0.10.0+261102.0900.a1b2c"
+
+
+def test_upgrade_installs_newest_release_tag_and_ignores_foreign_tags(sandbox):
+    """Sortiert nach Version, nicht nach Text; fremde Tags und Vorabversionen zählen nicht."""
+    sandbox.tags[BASHLIB_REMOTE] = [
+        "v0.1.0",
+        "v0.9.0+261101.1000.ffff0",
+        NEWEST,
+        "latest",
+        "v1.0.0-rc1",
+        "v2.0",
+    ]
+    result, calls = sandbox.run("upgrade")
+    assert result.returncode == 0, result.stderr
+    assert calls == [["install", "--force", f"{GIT_BASHLIB}@{NEWEST}"]], calls
+    assert "ProjectTools  current (0.3.2)" in result.stdout, result.stdout
+    assert "BashLib       updated from 0.1.0 to 0.10.0" in result.stdout, result.stdout
+    # Ohne --write bleibt die Config, die Ausgabe nennt den Weg.
+    assert f"BASHLIB_TAG={sandbox.config['BASHLIB_TAG']}" in sandbox.conf.read_text()
+    assert "devtools upgrade --write" in result.stdout, result.stdout
+
+
+def test_upgrade_name_limits_the_run_to_one_tool(sandbox):
+    """upgrade NAME fasst nur dieses Werkzeug an."""
+    sandbox.tags[TOOLS_REMOTE].append("v0.4.0+261102.0800.c0ffe")
+    result, calls = sandbox.run("upgrade", "projecttools")
+    assert calls == [["install", "--force", f"{GIT_TOOLS}@v0.4.0+261102.0800.c0ffe"]], calls
+    assert "BashLib" not in result.stdout, result.stdout
+
+    unknown, _ = sandbox.run("upgrade", "gibtsnicht")
+    assert unknown.returncode == 2 and "known: projecttools" in unknown.stderr
+
+
+def test_dry_run_shows_installed_config_and_newest_version_without_installing(sandbox):
+    """-n und --dry-run: Tabelle, kein pipx-Aufruf, Config unverändert."""
+    sandbox.tags[BASHLIB_REMOTE].append(NEWEST)
+    for flag in ("-n", "--dry-run"):
+        result, calls = sandbox.run("upgrade", flag, "--write")
+        assert result.returncode == 0, result.stderr
+        assert calls == [], calls
+        rows = result.stdout.splitlines()
+        assert rows[0].split() == ["Tool", "Installed", "Config", "Newest"], rows
+        assert rows[1].split()[:4] == ["ProjectTools", "0.3.2", "0.3.2", "0.3.2"], rows
+        assert rows[2].split()[:4] == ["BashLib", "0.1.0", "0.2.0", "0.10.0"], rows
+        assert rows[2].endswith("→ devtools upgrade"), rows
+        assert "BASHLIB_TAG=v0.2.0+261031.2038.b22f0" in sandbox.conf.read_text()
+
+
+def test_write_replaces_older_tags_and_keeps_every_other_byte(sandbox):
+    """--write ersetzt nur den Wert des veralteten NAME_TAG; Kommentare bleiben."""
+    sandbox.head = "#!/usr/bin/env bash\n# Werkzeuge\n\n"
+    sandbox.config["BASHLIB_TAG"] = "v0.2.0+261031.2038.b22f0  # BashLib"
+    sandbox.tags[BASHLIB_REMOTE].append(NEWEST)
+    before = sandbox.conf_text()
+    result, _ = sandbox.run("upgrade", "--write")
+    assert result.returncode == 0, result.stderr
+    expected = before.replace("BASHLIB_TAG=v0.2.0+261031.2038.b22f0  #", f"BASHLIB_TAG={NEWEST}  #")
+    assert sandbox.conf.read_text() == expected
+    assert f"BASHLIB_TAG v0.2.0+261031.2038.b22f0 → {NEWEST}" in result.stdout, result.stdout
+
+
+def test_unreachable_remote_or_missing_tag_is_reported_and_others_continue(sandbox):
+    """Ein Werkzeug ohne lesbaren Tag: Meldung, die übrigen laufen weiter, Exit 1."""
+    del sandbox.tags[TOOLS_REMOTE]
+    result, calls = sandbox.run("upgrade")
+    assert result.returncode == 1
+    assert "ProjectTools  newest tag not readable: fatal: repository" in result.stdout
+    assert calls == [["install", "--force", f"{GIT_BASHLIB}@v0.2.0+261031.2038.b22f0"]], calls
+
+    sandbox.tags[TOOLS_REMOTE] = ["latest", "v1.0"]
+    shown, _ = sandbox.run("upgrade", "-n")
+    assert shown.returncode == 1
+    assert "no release tag (vX.Y.Z)" in shown.stdout, shown.stdout
+
+
+def test_working_copy_as_source_takes_newest_local_tag(sandbox):
+    """Arbeitskopie als Quelle: neuester Tag des lokalen Repos für Anzeige und Config; eine
+    bearbeitbare Arbeitskopie ist schon live eingebunden, pipx bleibt still."""
+    local = sandbox.working_copy("mmit-bashlib", "0.3.0")
+    sandbox.config["BASHLIB_SOURCE"] = "mmit-bashlib"
+    sandbox.state["mmit-bashlib"] = venv(str(local.resolve()), "0.1.0", editable=True)
+    sandbox.tags[str(local.resolve())] = ["v0.2.0+261031.2038.b22f0", "v0.3.0+261102.1000.0abc1"]
+    shown, calls = sandbox.run("upgrade", "-n")
+    assert calls == [], calls
+    assert shown.stdout.splitlines()[2].split()[:4] == ["BashLib", "0.3.0", "0.2.0", "0.3.0"]
+
+    result, calls = sandbox.run("upgrade", "--write")
+    assert result.returncode == 0, result.stderr
+    assert calls == [], calls
+    assert "BASHLIB_TAG=v0.3.0+261102.1000.0abc1" in sandbox.conf.read_text()
+
+
+def test_working_copy_installed_while_config_wants_git_stays(sandbox):
+    """Wie bei install: eine selbst installierte Arbeitskopie bleibt unberührt."""
+    local = sandbox.working_copy("mmit-bashlib", "0.2.0")
+    sandbox.state["mmit-bashlib"] = venv(str(local), "0.2.0", editable=True)
+    sandbox.tags[BASHLIB_REMOTE].append(NEWEST)
+    result, calls = sandbox.run("upgrade")
+    assert calls == [], calls
+    assert "left untouched" in result.stdout, result.stdout
+
+
+def test_devtools_itself_comes_last(sandbox):
+    """Steht devtools selbst in der Config, ersetzt pipx die laufende venv; deshalb zuletzt."""
+    remote = "git+https://example.invalid/python-devtools.git"
+    config = {
+        "DEVTOOLS_PACKAGE": "mmit-devtools",
+        "DEVTOOLS_TAG": "v0.2.0+261101.1319.09840",
+        "DEVTOOLS_SOURCE": remote,
+    }
+    sandbox.config = {**config, **sandbox.config}
+    sandbox.tags[remote.removeprefix("git+")] = ["v0.3.0+261102.1100.d0d0d"]
+    sandbox.tags[BASHLIB_REMOTE].append(NEWEST)
+    packages = {
+        GIT_TOOLS: "mmit-projecttools",
+        GIT_BASHLIB: "mmit-bashlib",
+        remote: "mmit-devtools",
+    }
+    for command in ("install", "upgrade"):
+        result, calls = sandbox.run(command, env={"PIPX_GIT_PACKAGES": json.dumps(packages)})
+        assert result.returncode == 0, result.stderr
+        assert calls[-1][-1].startswith(f"{remote}@"), calls
+        assert result.stdout.index("mmit-devtools") > result.stdout.index("BashLib"), result.stdout

@@ -1,7 +1,8 @@
-"""Gemeinsame Hilfen: pipx-Ersatz im PATH und Aufruf des echten Befehls devtools.
+"""Gemeinsame Hilfen: pipx- und git-Ersatz im PATH und Aufruf des echten Befehls devtools.
 
-Der pipx-Ersatz führt seinen Stand in einer Datei und protokolliert jeden Aufruf; der echte
-Rechner und sein pipx bleiben unberührt.
+Der pipx-Ersatz führt seinen Stand in einer Datei und protokolliert jeden Aufruf; der git-Ersatz
+liefert die Tags je Quelle aus GIT_TAGS. Der echte Rechner, sein pipx und das Netz bleiben
+unberührt.
 """
 
 import json
@@ -50,7 +51,20 @@ data[package] = {"metadata": {"main_package": {
     "pip_args": ["--editable"] if editable else []}}}
 state.write_text(json.dumps(data))
 """
-LAUNCHER = '#!/bin/sh\nexec "$PIPX_PYTHON" "$PIPX_SCRIPT" "$@"\n'
+# git ls-remote URL und git -C PFAD tag --list: die Tags aus GIT_TAGS je URL bzw. Pfad; eine
+# unbekannte Quelle scheitert wie ein nicht erreichbares Remote.
+FAKE_GIT = """\
+import json, os, sys
+args = sys.argv[1:]
+where = args[1] if args[0] == "-C" else args[-1]
+tags = json.loads(os.environ["GIT_TAGS"]).get(where)
+if tags is None:
+    sys.stderr.write(f"fatal: repository '{where}' not found\\n")
+    sys.exit(128)
+for tag in tags:
+    print(f"0123abcd\\trefs/tags/{tag}" if "ls-remote" in args else tag)
+"""
+LAUNCHER = '#!/bin/sh\nexec "$FAKE_PYTHON" "$0.py" "$@"\n'
 
 
 def venv(spec: str, version: str, editable: bool = False) -> dict:
@@ -73,6 +87,8 @@ class Sandbox:
     root: Path
     state: dict
     config: dict[str, str]
+    tags: dict[str, list[str]]
+    head: str = ""
 
     def working_copy(self, name: str, version: str) -> Path:
         """Arbeitskopie mit pyproject.toml in der genannten Version."""
@@ -83,24 +99,32 @@ class Sandbox:
         )
         return folder
 
+    @property
+    def conf(self) -> Path:
+        """Die Config, die run schreibt und devtools liest."""
+        return self.root / ".dev-tools.conf.sh"
+
+    def conf_text(self) -> str:
+        """Inhalt der Config: Kopf, dann je Eintrag NAME=wert."""
+        return self.head + "".join(f"{key}={value}\n" for key, value in self.config.items())
+
     def run(self, *args: str, env: dict[str, str] | None = None):
         """devtools mit dieser Config und dem pipx-Ersatz; liefert Ergebnis und pipx-Aufrufe."""
         (self.root / "state.json").write_text(json.dumps(self.state))
         calls = self.root / "calls.log"
         calls.write_text("")
-        conf = self.root / ".dev-tools.conf.sh"
-        conf.write_text("".join(f"{key}={value}\n" for key, value in self.config.items()))
+        self.conf.write_text(self.conf_text())
         environment = {
             "PATH": f"{self.root / 'bin'}:/usr/bin:/bin",
             # Nie die .mo aus dem Quellbaum: ein leerer Katalogordner, also Englisch.
             "DEVTOOLS_LOCALE_DIR": str(self.root / "locale"),
-            "PIPX_PYTHON": sys.executable,
-            "PIPX_SCRIPT": str(self.root / "bin" / "fake_pipx.py"),
+            "FAKE_PYTHON": sys.executable,
             "PIPX_STATE": str(self.root / "state.json"),
             "PIPX_CALLS": str(calls),
             "PIPX_GIT_PACKAGES": json.dumps(
                 {GIT_TOOLS: "mmit-projecttools", GIT_BASHLIB: "mmit-bashlib"}
             ),
+            "GIT_TAGS": json.dumps(self.tags),
             **(env or {}),
         }
         result = subprocess.run(
@@ -116,13 +140,15 @@ class Sandbox:
 
 @pytest.fixture
 def sandbox(tmp_path: Path) -> Sandbox:
-    """ProjectTools aktuell, BashLib veraltet; beide mit Git-Quelle."""
+    """ProjectTools aktuell, BashLib veraltet; beide mit Git-Quelle, deren neuester Tag dem der
+    Config entspricht."""
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
-    (bin_dir / "fake_pipx.py").write_text(FAKE_PIPX)
-    launcher = bin_dir / "pipx"
-    launcher.write_text(LAUNCHER)
-    launcher.chmod(0o755)
+    for name, script in (("pipx", FAKE_PIPX), ("git", FAKE_GIT)):
+        (bin_dir / f"{name}.py").write_text(script)
+        launcher = bin_dir / name
+        launcher.write_text(LAUNCHER)
+        launcher.chmod(0o755)
     config = {
         "PROJECTTOOLS_PACKAGE": "mmit-projecttools",
         "PROJECTTOOLS_LABEL": "ProjectTools",
@@ -137,4 +163,8 @@ def sandbox(tmp_path: Path) -> Sandbox:
         "mmit-projecttools": venv(f"{GIT_TOOLS}@v0.3.2+261029.1600.c7bbd", "0.3.2"),
         "mmit-bashlib": venv(f"{GIT_BASHLIB}@v0.1.0", "0.1.0"),
     }
-    return Sandbox(tmp_path, state, config)
+    tags = {
+        GIT_TOOLS.removeprefix("git+"): ["v0.3.2+261029.1600.c7bbd"],
+        GIT_BASHLIB.removeprefix("git+"): ["v0.1.0", "v0.2.0+261031.2038.b22f0"],
+    }
+    return Sandbox(tmp_path, state, config, tags)

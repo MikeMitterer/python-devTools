@@ -65,7 +65,9 @@ brechen die Prüfungen mit einem Hinweis darauf ab.
 Die Tests rufen den installierten Befehl `devtools` auf. pipx ist dabei ein
 Ersatz im `PATH`, der seinen Stand in einer Datei im temporären Testordner
 führt und jeden Aufruf protokolliert; das pipx des Rechners bleibt
-unberührt.
+unberührt. Ebenso ersetzt ein git-Ersatz `git ls-remote` und `git tag`: Er
+liefert die Tags je Quelle aus der Variable `GIT_TAGS`, die Tests brauchen
+kein Netz.
 
 [↑ Übersicht](#übersicht)
 
@@ -102,6 +104,7 @@ kein Oberflächentext steht roh im Code.
 | `src/mmit_devtools/cli.py` | Befehl `devtools`: Argumente, Ausgabe je Werkzeug, Exit-Codes |
 | `src/mmit_devtools/config.py` | `.dev-tools.conf.sh` lesen, Werkzeuge mit Paket, Tag, Quelle und Einbindung |
 | `src/mmit_devtools/pipx.py` | Zugriff auf pipx: `pipx list --json` lesen, Installation aufrufen |
+| `src/mmit_devtools/git.py` | Zugriff auf git: neuester Release-Tag einer Git-Quelle (`git ls-remote`) oder Arbeitskopie (`git tag`) |
 | `src/mmit_devtools/sync.py` | Abgleich von Config und Installation: was zu tun ist und was geschah |
 | `src/mmit_devtools/versions.py` | SemVer aus einem Tag, Version einer Arbeitskopie aus `pyproject.toml` |
 | `src/mmit_devtools/i18n.py` | `_()` über gettext, Kataloge unter `src/mmit_devtools/locale/` |
@@ -109,6 +112,9 @@ kein Oberflächentext steht roh im Code.
 
 Der Einstiegspunkt `devtools` steht in `pyproject.toml` unter
 `[project.scripts]`; darüber funktioniert auch `pipx run --spec … devtools`.
+
+Was schutzwürdig ist, welche Befehle DevTools startet und wem es dabei
+vertraut, steht im [Sicherheitsprofil](security-profile.md).
 
 [↑ Übersicht](#übersicht)
 
