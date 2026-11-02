@@ -9,7 +9,6 @@ from pathlib import Path
 from mmit_devtools import git, pipx
 from mmit_devtools.config import (
     CONFIG_NAME,
-    AnyPin,
     ConfigError,
     Pin,
     Tool,
@@ -45,7 +44,7 @@ def status(tools: list[Tool]) -> int:
     return 0
 
 
-def ordered(tools: list[AnyPin]) -> list[AnyPin]:
+def ordered[T: Pin](tools: list[T]) -> list[T]:
     """devtools selbst zuletzt: pipx ersetzt dabei die venv, aus der dieser Lauf kommt."""
     return sorted(tools, key=lambda tool: isinstance(tool, Tool) and tool.package == PACKAGE)
 
@@ -90,7 +89,7 @@ def unreadable(error: git.GitError) -> str:
     return _("newest tag not readable: {error}").format(error=error)
 
 
-def target(tool: AnyPin, tag: str | git.GitError) -> AnyPin | None:
+def target[T: Pin](tool: T, tag: str | git.GitError) -> T | None:
     """Das Werkzeug mit dem neuesten Tag; None, wenn eine Git-Quelle keinen lesbaren Tag hat.
 
     Eine Arbeitskopie als Quelle braucht zum Installieren keinen Tag; ohne lesbaren Tag bleibt
@@ -222,7 +221,7 @@ def check(tool: Tool) -> int:
     return 1
 
 
-def named(tools: list[AnyPin], name: str) -> AnyPin:
+def named[T: Pin](tools: list[T], name: str) -> T:
     """Das Werkzeug zu NAME, dem Präfix der Einträge, gleich in welcher Schreibung."""
     found = {tool.name: tool for tool in tools}
     if name.lower() not in found:

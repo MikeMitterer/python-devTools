@@ -58,14 +58,14 @@ locale (`LANGUAGE`, `LC_ALL`, `LANG`).
   version side by side, `--write` puts the newer tags into the config.
 - **Minimum version check:** `devtools check NAME` fails with the install
   command, ready for a Makefile.
-- **Standard library only:** Python 3.11 or later, no further packages at
+- **Standard library only:** Python 3.14 or later, no further packages at
   runtime.
 
 [↑ Contents](#contents)
 
 ## Quick start
 
-Requirements: Python 3.11 or later and [pipx](https://pipx.pypa.io/).
+Requirements: Python 3.14 or later and [pipx](https://pipx.pypa.io/).
 
 Tags follow the scheme `vX.Y.Z+YYMMDD.HHMM.hash`, and pipx needs the full
 tag. This command shows the latest one:
