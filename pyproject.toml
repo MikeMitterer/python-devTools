@@ -18,8 +18,13 @@ dependencies = []
 Homepage = "https://github.com/MikeMitterer/python-devtools"
 
 [project.optional-dependencies]
-# Entwicklung: Tests, Lint und Kataloge (make setup)
-dev = ["pytest", "ruff", "Babel==2.18.0"]
+# Farbige Ausgabe nach dem gemeinsamen CLI-Theme; ohne das Extra bleibt die Ausgabe reiner Text.
+# CLITheme führt mmit-devtools nie als Abhängigkeit (kein Zirkel, T-7).
+theme = [
+    "mmit-cli-theme @ git+https://github.com/MikeMitterer/python-clitheme.git@v0.2.0+261031.1844.14a24",
+]
+# Entwicklung: Tests, Lint und Kataloge (make setup); die Tests prüfen auch die Farben (theme)
+dev = ["mmit-devtools[theme]", "pytest", "ruff", "Babel==2.18.0"]
 
 [project.scripts]
 devtools = "mmit_devtools.cli:main"

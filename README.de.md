@@ -62,6 +62,10 @@ deutsch, je nach Spracheinstellung (`LANGUAGE`, `LC_ALL`, `LANG`).
   Installationsbefehl, passend für ein Makefile.
 - **Nur Standardbibliothek:** Python 3.14 oder neuer, zur Laufzeit keine
   weiteren Pakete.
+- **Farben auf Wunsch:** Mit dem Extra `theme` übernimmt die Ausgabe die
+  Farben des gemeinsamen
+  [CLITheme](https://github.com/MikeMitterer/python-clitheme), nur im
+  Terminal und nie mit `NO_COLOR`; ohne das Extra bleibt sie reiner Text.
 
 [↑ Übersicht](#übersicht)
 
@@ -89,6 +93,12 @@ benutzen.
 ```bash
 pipx install 'git+https://github.com/MikeMitterer/python-devtools.git@<release-tag>'
 devtools install
+```
+
+**Mit Farben:** Das Extra `theme` installiert zusätzlich CLITheme und rich.
+
+```bash
+pipx install 'mmit-devtools[theme] @ git+https://github.com/MikeMitterer/python-devtools.git@<release-tag>'
 ```
 
 [↑ Übersicht](#übersicht)

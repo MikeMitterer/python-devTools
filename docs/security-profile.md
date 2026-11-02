@@ -52,6 +52,11 @@ es läuft mit den Rechten dessen, der es aufruft.
   Buchstaben und Punkten entsprechen. Andere Tags verwirft es, bevor sie einen
   pipx-Aufruf oder eine Zeile der Config bilden. Wer in ein Quell-Repository
   Tags schreiben darf, bestimmt damit, was `upgrade` installiert.
+- **Abhängigkeiten:** ohne Extras keine. Das Extra `theme` installiert
+  `mmit-cli-theme` an einem festen Git-Tag und dazu rich aus dem Paketindex.
+  Es liest das Theme aus `${XDG_CONFIG_HOME:-~/.config}/cli-theme/` und die
+  Variablen `CLI_THEME`, `NO_COLOR` und `TERM`; daraus entstehen nur Farben,
+  nie Befehle oder Pfade für pipx und git.
 - **pipx list --json:** wird als JSON gelesen; ein unlesbarer Stand endet mit
   einer Meldung statt eines Tracebacks.
 

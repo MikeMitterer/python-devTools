@@ -19,8 +19,11 @@ Reihenfolge für den ersten Start `make hints`.
 
 Python 3.14 oder neuer, wie `requires-python` in `pyproject.toml` verlangt;
 `make setup` nimmt `python3.14`, ein anderer Interpreter geht mit
-`PYTHON_BOOTSTRAP=…`. Zur Laufzeit braucht das Paket
-nur die Standardbibliothek.
+`PYTHON_BOOTSTRAP=…`. Zur Laufzeit braucht das Paket nur die
+Standardbibliothek; das Extra `theme` bringt CLITheme (`mmit-cli-theme`, als
+Git-Tag in `pyproject.toml`) und rich für farbige Ausgabe. `make setup`
+installiert es über das Extra `dev` mit, damit die Tests beide Wege prüfen.
+CLITheme führt `mmit-devtools` nie als Abhängigkeit, so entsteht kein Zirkel.
 
 Die Prüfungen brauchen ProjectTools (`docs-check`, `repo-status`,
 `changelog`), Releases zusätzlich BashLib, beide über pipx. Paket, Tag und
@@ -108,6 +111,7 @@ kein Oberflächentext steht roh im Code.
 | `src/mmit_devtools/git.py` | Zugriff auf git: neuester Release-Tag einer Git-Quelle (`git ls-remote`) oder Arbeitskopie (`git tag`) |
 | `src/mmit_devtools/sync.py` | Abgleich von Config und Installation: was zu tun ist und was geschah |
 | `src/mmit_devtools/versions.py` | SemVer aus einem Tag, Version einer Arbeitskopie aus `pyproject.toml` |
+| `src/mmit_devtools/style.py` | Ausgabe einer Zeile mit Rollen des CLI-Themes; ohne das Extra `theme` reiner Text |
 | `src/mmit_devtools/i18n.py` | `_()` über gettext, Kataloge unter `src/mmit_devtools/locale/` |
 | `setup.py` | Paketbau: übersetzt die Kataloge beim Bauen nach `.mo` |
 

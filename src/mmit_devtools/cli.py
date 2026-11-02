@@ -5,6 +5,7 @@ import shlex
 import sys
 from importlib.metadata import version
 from pathlib import Path
+from typing import TextIO
 
 from mmit_devtools import git, pipx
 from mmit_devtools.config import (
@@ -18,6 +19,7 @@ from mmit_devtools.config import (
 )
 from mmit_devtools.i18n import _
 from mmit_devtools.pipx import Installed
+from mmit_devtools.style import emit
 from mmit_devtools.sync import done, plan, satisfies, upgraded
 from mmit_devtools.versions import semver
 
@@ -28,10 +30,24 @@ class UnknownTool(Exception):
     """NAME nennt kein Werkzeug der Config; der Text nennt die bekannten."""
 
 
-def line(tools: list[Pin], tool: Pin, text: str) -> None:
-    """Eine Zeile je Werkzeug; die Beschriftungen aller Werkzeuge stehen bündig."""
+def line(tools: list[Pin], tool: Pin, text: str, role: str) -> None:
+    """Eine Zeile je Werkzeug; die Beschriftungen aller Werkzeuge stehen bündig.
+
+    role ist die Rolle des Themes für den Zustand: ok, warn oder err.
+    """
     width = max(len(each.label) for each in tools)
-    print(f"  {tool.label:<{width}}  {text}")
+    parts = [("  ", None), (tool.label.ljust(width), "key"), ("  ", None), (text, role)]
+    emit(parts, hang=width + 4)
+
+
+def state_role(needed: bool) -> str:
+    """Rolle eines Zustands: warn, wenn ein Schritt nötig ist, sonst ok."""
+    return "warn" if needed else "ok"
+
+
+def message(text: str, role: str, stream: TextIO | None = None) -> None:
+    """Eine eingerückte Meldung in einer Rolle, etwa hint, warn oder err."""
+    emit([("  ", None), (text, role)], stream, hang=2)
 
 
 def status(tools: list[Tool]) -> int:
@@ -40,7 +56,7 @@ def status(tools: list[Tool]) -> int:
     for tool in tools:
         result = plan(tool, found.get(tool.package))
         hint = _("{state} → devtools install").format(state=result.text)
-        line(tools, tool, hint if result.needed else result.text)
+        line(tools, tool, hint if result.needed else result.text, state_role(result.needed))
     return 0
 
 
@@ -54,15 +70,16 @@ def bring(tools: list[Pin], tool: Tool, found: dict[str, Installed]) -> bool:
     before = found.get(tool.package)
     result = plan(tool, before)
     if not result.needed:
-        line(tools, tool, result.text)
+        line(tools, tool, result.text, "ok")
         return True
     called = pipx.run(tool.command())
     if called.returncode:
         text = _("pipx failed ({state}): {command}")
-        line(tools, tool, text.format(state=result.text, command=shlex.join(tool.command())))
+        command = shlex.join(tool.command())
+        line(tools, tool, text.format(state=result.text, command=command), "err")
         sys.stderr.write(called.stderr[-2000:])
         return False
-    line(tools, tool, done(tool, before, pipx.installed().get(tool.package)))
+    line(tools, tool, done(tool, before, pipx.installed().get(tool.package)), "ok")
     return True
 
 
@@ -111,28 +128,42 @@ def preview(entries: list[Pin], newest: dict[str, str | git.GitError]) -> int:
     """Tabelle installiert, Config und neueste Version samt nötigem Schritt; installiert nichts."""
     found, failed = pipx.installed(), False
     rows = [[_("Tool"), _("Installed"), _("Config"), _("Newest"), ""]]
+    roles = ["head"]
     for entry in entries:
         tag = newest[entry.name]
         before = found.get(entry.package) if isinstance(entry, Tool) else None
         wanted = target(entry, tag)
         if wanted is None:
-            state, failed = unreadable(tag), True
+            state, role, failed = unreadable(tag), "err", True
         elif isinstance(wanted, Tool):
             result = plan(wanted, before)
             hint = _("{state} → devtools upgrade").format(state=result.text)
             state = hint if result.needed else result.text
+            role = state_role(result.needed)
         else:
-            state = pinned(entry, wanted)
+            state, role = pinned(entry, wanted), state_role(wanted.tag != entry.tag)
             if wanted.tag != entry.tag:
                 state = _("{state} → devtools upgrade --write").format(state=state)
         version = semver(tag) if isinstance(tag, str) else "?"
         installed = before.version if before else "–"
         rows.append([entry.label, installed, entry.minimum or "?", version, state])
+        roles.append(role)
     widths = [max(len(row[column]) for row in rows) for column in range(4)]
-    for row in rows:
-        cells = [cell.ljust(width) for cell, width in zip(row, widths, strict=False)]
-        print(f"  {'  '.join([*cells, row[4]]).rstrip()}")
+    for row, role in zip(rows, roles, strict=True):
+        table_row(row, widths, role)
     return 1 if failed else 0
+
+
+def table_row(row: list[str], widths: list[int], role: str) -> None:
+    """Eine Zeile der Tabelle: Kopf in der Rolle head, sonst Werkzeug, Versionen und Zustand."""
+    cells = [cell.ljust(width) for cell, width in zip(row, widths, strict=False)]
+    if role == "head":
+        emit([("  ", None), ("  ".join([*cells, row[4]]).rstrip(), "head")])
+        return
+    parts: list[tuple[str, str | None]] = [("  ", None), (cells[0], "key")]
+    for cell in cells[1:]:
+        parts += [("  ", None), (cell, "val")]
+    emit([*parts, ("  ", None), (row[4], role)], hang=sum(widths) + 2 * len(widths) + 2)
 
 
 def upgrade(entries: list[Pin], config: Path, write: bool, unsourced: list[str]) -> int:
@@ -147,10 +178,10 @@ def upgrade(entries: list[Pin], config: Path, write: bool, unsourced: list[str])
     for entry in ordered(entries):
         wanted = target(entry, newest[entry.name])
         if wanted is None:
-            line(entries, entry, unreadable(newest[entry.name]))
+            line(entries, entry, unreadable(newest[entry.name]), "err")
             failed = True
         elif not isinstance(wanted, Tool):
-            line(entries, entry, pinned(entry, wanted))
+            line(entries, entry, pinned(entry, wanted), state_role(wanted.tag != entry.tag))
             handled.append((entry, wanted))
         elif bring(entries, wanted, found):
             handled.append((entry, wanted))
@@ -163,10 +194,11 @@ def upgrade(entries: list[Pin], config: Path, write: bool, unsourced: list[str])
         write_tags(config, {key(entry): wanted.tag for entry, wanted in reached})
     if write:
         for entry, wanted in handled:
-            print(f"  {config}: {written(entry, wanted, (entry, wanted) in reached, after)}")
+            text, role = written(entry, wanted, (entry, wanted) in reached, after)
+            message(f"{config}: {text}", role)
     elif reached:
         text = _("{config} still names older tags: devtools upgrade --write")
-        print(f"  {text.format(config=config)}")
+        message(text.format(config=config), "hint")
     without_source(config, unsourced)
     return 1 if failed else 0
 
@@ -176,7 +208,7 @@ def without_source(config: Path, unsourced: list[str]) -> None:
     for name in unsourced:
         text = _("{key} has no {source}: its newest tag is unknown")
         source = f"{name.removesuffix('_TAG')}_SOURCE"
-        print(f"  {config}: {text.format(key=name, source=source)}")
+        message(f"{config}: {text.format(key=name, source=source)}", "warn")
 
 
 def reaches_tag(after: dict[str, Installed], entry: Pin, wanted: Pin) -> bool:
@@ -185,16 +217,17 @@ def reaches_tag(after: dict[str, Installed], entry: Pin, wanted: Pin) -> bool:
     return not isinstance(wanted, Tool) or reaches(after.get(wanted.package), wanted)
 
 
-def written(entry: Pin, wanted: Pin, reached: bool, after: dict[str, Installed]) -> str:
-    """Was --write mit dem Eintrag NAME_TAG machte: alt → neu, aktuell oder warum er bleibt."""
+def written(entry: Pin, wanted: Pin, reached: bool, after: dict[str, Installed]) -> tuple[str, str]:
+    """Was --write mit dem Eintrag NAME_TAG machte, samt Rolle: alt → neu, aktuell oder warum
+    er bleibt."""
     if wanted.tag == entry.tag:
-        return _("{key} current ({tag})").format(key=key(entry), tag=entry.tag)
+        return _("{key} current ({tag})").format(key=key(entry), tag=entry.tag), "ok"
     if reached:
-        return f"{key(entry)} {entry.tag} → {wanted.tag}"
+        return f"{key(entry)} {entry.tag} → {wanted.tag}", "ok"
     now = after.get(entry.package) if isinstance(entry, Tool) else None
     text = _("{key} stays at {old}: installed {version} does not reach {new}")
     values = {"key": key(entry), "old": entry.tag, "new": wanted.tag}
-    return text.format(version=now.version if now else "–", **values)
+    return text.format(version=now.version if now else "–", **values), "warn"
 
 
 def reaches(found: Installed | None, tool: Tool) -> bool:
@@ -217,7 +250,7 @@ def check(tool: Tool) -> int:
     else:
         text = _("✗ {label} {version} is too old (requires {minimum} or later): {command}")
     values = {"label": tool.label, "minimum": tool.minimum, "command": shlex.join(tool.command())}
-    sys.stderr.write(f"  {text.format(version=found and found.version, **values)}\n")
+    message(text.format(version=found and found.version, **values), "err", sys.stderr)
     return 1
 
 
@@ -303,10 +336,10 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         return check(tool)
     except UnknownTool as error:
-        sys.stderr.write(f"  {error}\n")
+        message(str(error), "err", sys.stderr)
         return 2
     except (ConfigError, pipx.PipxError) as error:
-        sys.stderr.write(f"  ✗ {error}\n")
+        message(f"✗ {error}", "err", sys.stderr)
         return 1
 
 
