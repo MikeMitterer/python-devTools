@@ -46,8 +46,12 @@ def state_role(needed: bool) -> str:
 
 
 def message(text: str, role: str, stream: TextIO | None = None) -> None:
-    """Eine eingerückte Meldung in einer Rolle, etwa hint, warn oder err."""
-    emit([("  ", None), (text, role)], stream)
+    """Eine eingerückte Meldung in einer Rolle, etwa hint, warn oder err.
+
+    Zeilenenden am Schluss fallen weg (etwa das Beispiel einer Config-Meldung): Die Leerzeile
+    danach setzt allein der Abschluss von CLITheme.
+    """
+    emit([("  ", None), (text.rstrip("\n"), role)], stream)
 
 
 def status(tools: list[Tool]) -> int:

@@ -26,14 +26,21 @@ def test_commands_end_with_one_blank_line(sandbox, args):
     )
 
 
-def test_errors_end_with_blank_line_on_stderr(sandbox):
-    """Fehlermeldungen von check, unbekanntem Werkzeug und Argumenten enden auf stderr mit
-    einer Leerzeile; stdout bleibt leer."""
-    for args in (("check", "bashlib"), ("check", "gibtsnicht"), ("gibtsnicht",)):
+def test_errors_end_with_one_blank_line_on_stderr(sandbox):
+    """Fehlermeldungen von check, unbekanntem Werkzeug, Argumenten und Config enden auf stderr
+    mit genau einer Leerzeile, auch wenn die Meldung ein Beispiel samt Zeilenende mitbringt
+    (R1-F1); stdout bleibt leer."""
+    cases = [("check", "bashlib"), ("check", "gibtsnicht"), ("gibtsnicht",)]
+    cases.append(("--config", "nirgends.conf.sh", "status"))
+    for args in cases:
         result, _ = sandbox.run(*args)
         assert result.returncode != 0, args
         assert result.stdout == "", (args, result.stdout)
-        assert result.stderr.endswith("\n\n"), (args, repr(result.stderr))
+        ending = result.stderr[-3:]
+        assert ending.endswith("\n\n") and ending != "\n\n\n", (args, repr(result.stderr))
+    sandbox.config = {"BASHLIB_TAG": "v0.1.0"}
+    without_tool, _ = sandbox.run("status")
+    assert without_tool.stderr.endswith("\n\n") and not without_tool.stderr.endswith("\n\n\n")
 
 
 def test_machine_output_stays_without_blank_line(sandbox):
