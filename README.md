@@ -92,6 +92,10 @@ pipx install 'git+https://github.com/MikeMitterer/python-devtools.git@<release-t
 devtools install
 ```
 
+**From a checkout:** `make install` builds DevTools from the checked-out state
+and installs it with pipx, colors included. `make install-tools` installs the
+tools from `.dev-tools.conf.sh` instead.
+
 **With colors:** the extra `theme` also installs CLITheme and rich.
 
 ```bash

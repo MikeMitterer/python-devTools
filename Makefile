@@ -63,7 +63,7 @@ NO_DEVTOOLS  = echo -e "  $(RED)✗$(RESET) devtools fehlt, erst einrichten: $(Y
 # Was setup herstellt und require-setup prüft: Paket und Werkzeuge in der .venv und die .mo.
 CATALOGS     := $(patsubst %.po,%.mo,$(wildcard src/mmit_devtools/locale/*/LC_MESSAGES/*.po))
 SETUP_STAMPS := $(VENV)/.installed $(CATALOGS)
-SHELL_FILES := .githooks/pre-commit .dev-tools.conf.sh .docs-check.conf.sh .repo-status.conf.sh
+SHELL_FILES := .githooks/pre-commit scripts/install-devtools.sh .dev-tools.conf.sh .docs-check.conf.sh .repo-status.conf.sh
 
 # ─── Hilfe ───────────────────────────────────────────────────────────────────
 
@@ -131,6 +131,7 @@ hints: ## Reihenfolge für den ersten Start und Installationswege anzeigen
 	@echo "$(THEME_INDENT_GROUP)$(THEME_COLOR_GROUP)devtools benutzen$(RESET)"
 	@$(call hint_row,Aus Git,$(if $(REPO_URL),pipx install 'git+$(REPO_URL).git@$(RELEASE_TAG)',$(NO_REMOTE)))
 	@$(call hint_row,Ohne Installation,$(if $(REPO_URL),pipx run --spec 'git+$(REPO_URL).git@$(RELEASE_TAG)' devtools status,$(NO_REMOTE)))
+	@$(call hint_row,Aus diesem Stand,make install)
 	@$(call hint_row,Arbeitskopie,pipx install -e $${WORKSPACE_SQ})
 	@echo
 	@echo "$(THEME_INDENT_GROUP)$(THEME_COLOR_GROUP)Werkzeuge$(RESET)"
@@ -180,6 +181,12 @@ setup: $(SETUP_STAMPS) ## Git-Hooks, .venv mit dem Paket und den Prüfwerkzeugen
 .PHONY: install-tools
 install-tools: require-setup ## Werkzeuge aus .dev-tools.conf.sh mit pipx installieren oder aktualisieren
 	@$(DEVTOOLS) install
+
+# DevTools selbst als Wheel aus diesem Stand, samt Extra theme (Farben, T-7); Ablauf und Gründe
+# in scripts/install-devtools.sh.
+.PHONY: install
+install: require-setup ## devtools aus diesem Stand auf dem Rechner, mit Farben (pipx)
+	@scripts/install-devtools.sh $(PYTHON)
 
 # Stempeldatei: nur setup legt sie an. Nicht .venv/bin/python als Ziel nehmen; es ist ein Link
 # aufs System-Python und hätte dessen Zeitstempel.
