@@ -62,8 +62,9 @@ locale (`LANGUAGE`, `LC_ALL`, `LANG`).
   runtime.
 - **Colors on request:** with the extra `theme`, the output takes the colors
   of the shared [CLITheme](https://github.com/MikeMitterer/python-clitheme),
-  in a terminal only and never with `NO_COLOR`; without it, the output stays
-  plain text.
+  in a terminal only and never with `NO_COLOR`, and every output, help
+  included, ends with a blank line like in all apps with CLITheme; without it,
+  the output stays plain text.
 
 [↑ Contents](#contents)
 

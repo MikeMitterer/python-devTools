@@ -93,8 +93,9 @@ info: ## Umgebung, Pfade und Werkzeugversionen anzeigen
 		DEV_MAKE "$${DEV_MAKE:-nicht gesetzt}"
 	@echo
 	@echo "$(THEME_INDENT_GROUP)$(THEME_COLOR_GROUP)Werkzeuge (.dev-tools.conf.sh)$(RESET)"
-	@if $(HAS_DEVTOOLS); then $(DEVTOOLS) status || true; else echo "  devtools noch nicht eingerichtet: make setup"; fi
-	@echo
+	@# devtools schließt seine Ausgabe selbst mit einer Leerzeile ab (CLITheme, T-10).
+	@if $(HAS_DEVTOOLS); then $(DEVTOOLS) status || true; \
+	 else echo "  devtools noch nicht eingerichtet: make setup"; echo; fi
 
 # Repo-Adresse aus git remote origin (SSH oder HTTPS) als https-URL, und der letzte Release-Tag.
 # Beide kommen von außen (Ref-Namen dürfen $, ( und ) enthalten) und landen im Rezept; deshalb
