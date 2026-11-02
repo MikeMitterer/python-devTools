@@ -28,5 +28,5 @@ def working_copy_version(path: Path) -> str | None:
     try:
         text = (path / "pyproject.toml").read_text(encoding="utf-8")
         return str(tomllib.loads(text)["project"]["version"])
-    except (OSError, KeyError, TypeError, tomllib.TOMLDecodeError):
+    except OSError, KeyError, TypeError, tomllib.TOMLDecodeError:
         return None

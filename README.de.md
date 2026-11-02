@@ -60,14 +60,14 @@ deutsch, je nach Spracheinstellung (`LANGUAGE`, `LC_ALL`, `LANG`).
   nebeneinander, `--write` trägt die neueren Tags in die Config ein.
 - **Prüfung der Mindestversion:** `devtools check NAME` scheitert mit dem
   Installationsbefehl, passend für ein Makefile.
-- **Nur Standardbibliothek:** Python 3.11 oder neuer, zur Laufzeit keine
+- **Nur Standardbibliothek:** Python 3.14 oder neuer, zur Laufzeit keine
   weiteren Pakete.
 
 [↑ Übersicht](#übersicht)
 
 ## Schnellstart
 
-Voraussetzungen: Python 3.11 oder neuer und [pipx](https://pipx.pypa.io/).
+Voraussetzungen: Python 3.14 oder neuer und [pipx](https://pipx.pypa.io/).
 
 Tags folgen dem Schema `vX.Y.Z+YYMMDD.HHMM.hash`, und pipx braucht den vollen
 Tag. Dieser Befehl zeigt den neuesten:

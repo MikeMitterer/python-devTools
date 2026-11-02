@@ -17,8 +17,9 @@ Reihenfolge für den ersten Start `make hints`.
 
 ## Voraussetzungen
 
-Python 3.11 oder neuer; `make setup` nimmt `python3.14`, ein anderer
-Interpreter geht mit `PYTHON_BOOTSTRAP=…`. Zur Laufzeit braucht das Paket
+Python 3.14 oder neuer, wie `requires-python` in `pyproject.toml` verlangt;
+`make setup` nimmt `python3.14`, ein anderer Interpreter geht mit
+`PYTHON_BOOTSTRAP=…`. Zur Laufzeit braucht das Paket
 nur die Standardbibliothek.
 
 Die Prüfungen brauchen ProjectTools (`docs-check`, `repo-status`,

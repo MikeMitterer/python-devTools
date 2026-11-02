@@ -3,7 +3,7 @@
 from dataclasses import dataclass, replace
 from pathlib import Path
 
-from mmit_devtools.config import AnyPin, Tool
+from mmit_devtools.config import Pin, Tool
 from mmit_devtools.i18n import _
 from mmit_devtools.pipx import Installed
 from mmit_devtools.versions import as_tuple, working_copy_version
@@ -27,7 +27,7 @@ def satisfies(found: Installed, tool: Tool) -> bool:
     return as_tuple(found.version) >= as_tuple(tool.minimum)
 
 
-def upgraded(tool: AnyPin, newest: str) -> AnyPin:
+def upgraded[T: Pin](tool: T, newest: str) -> T:
     """Das Werkzeug mit dem neuesten Tag, wenn er über dem Tag der Config liegt."""
     if as_tuple(newest) > as_tuple(tool.minimum):
         return replace(tool, tag=newest)

@@ -10,8 +10,8 @@ description = "Check, show and install the pipx development tools a project list
 readme = "README.md"
 license = "EUPL-1.2"
 license-files = ["LICENSE", "LICENSE.de.txt", "LICENSING.md"]
-# 3.11: tomllib für die Version einer Arbeitskopie
-requires-python = ">=3.11"
+# Hausregel Mindestversion Python 3.14 (T-8); tests/test_python_version.py hält Doku und Makefile gleich
+requires-python = ">=3.14"
 dependencies = []
 
 [project.urls]

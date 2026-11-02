@@ -11,7 +11,6 @@ import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TypeVar
 
 from mmit_devtools.i18n import _
 from mmit_devtools.versions import semver
@@ -59,10 +58,6 @@ class Pin:
     def minimum(self) -> str | None:
         """Mindestversion: der SemVer-Teil des Tags."""
         return semver(self.tag)
-
-
-# Ein Pin oder Tool; Funktionen für beide geben die Art zurück, die sie bekommen.
-AnyPin = TypeVar("AnyPin", bound=Pin)
 
 
 @dataclass(frozen=True)
