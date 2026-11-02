@@ -7,7 +7,16 @@ from importlib.metadata import version
 from pathlib import Path
 
 from mmit_devtools import git, pipx
-from mmit_devtools.config import CONFIG_NAME, ConfigError, Tool, load_tools, write_tags
+from mmit_devtools.config import (
+    CONFIG_NAME,
+    AnyPin,
+    ConfigError,
+    Pin,
+    Tool,
+    load_pins,
+    load_tools,
+    write_tags,
+)
 from mmit_devtools.i18n import _
 from mmit_devtools.pipx import Installed
 from mmit_devtools.sync import done, plan, satisfies, upgraded
@@ -20,7 +29,7 @@ class UnknownTool(Exception):
     """NAME nennt kein Werkzeug der Config; der Text nennt die bekannten."""
 
 
-def line(tools: list[Tool], tool: Tool, text: str) -> None:
+def line(tools: list[Pin], tool: Pin, text: str) -> None:
     """Eine Zeile je Werkzeug; die Beschriftungen aller Werkzeuge stehen bündig."""
     width = max(len(each.label) for each in tools)
     print(f"  {tool.label:<{width}}  {text}")
@@ -36,12 +45,12 @@ def status(tools: list[Tool]) -> int:
     return 0
 
 
-def ordered(tools: list[Tool]) -> list[Tool]:
+def ordered(tools: list[AnyPin]) -> list[AnyPin]:
     """devtools selbst zuletzt: pipx ersetzt dabei die venv, aus der dieser Lauf kommt."""
-    return sorted(tools, key=lambda tool: tool.package == PACKAGE)
+    return sorted(tools, key=lambda tool: isinstance(tool, Tool) and tool.package == PACKAGE)
 
 
-def bring(tools: list[Tool], tool: Tool, found: dict[str, Installed]) -> bool:
+def bring(tools: list[Pin], tool: Tool, found: dict[str, Installed]) -> bool:
     """Bringt ein Werkzeug auf Quelle und Tag, meldet, was geschah; False, wenn pipx scheitert."""
     before = found.get(tool.package)
     result = plan(tool, before)
@@ -65,7 +74,7 @@ def install(tools: list[Tool]) -> int:
     return 0 if all(results) else 1
 
 
-def newest_tags(tools: list[Tool]) -> dict[str, str | git.GitError]:
+def newest_tags(tools: list[Pin]) -> dict[str, str | git.GitError]:
     """Je Werkzeug der neueste Release-Tag seiner Quelle oder der Fehler, der ihn verhindert."""
     result: dict[str, str | git.GitError] = {}
     for tool in tools:
@@ -81,7 +90,7 @@ def unreadable(error: git.GitError) -> str:
     return _("newest tag not readable: {error}").format(error=error)
 
 
-def target(tool: Tool, tag: str | git.GitError) -> Tool | None:
+def target(tool: AnyPin, tag: str | git.GitError) -> AnyPin | None:
     """Das Werkzeug mit dem neuesten Tag; None, wenn eine Git-Quelle keinen lesbaren Tag hat.
 
     Eine Arbeitskopie als Quelle braucht zum Installieren keinen Tag; ohne lesbaren Tag bleibt
@@ -92,22 +101,34 @@ def target(tool: Tool, tag: str | git.GitError) -> Tool | None:
     return tool if tool.local else None
 
 
-def preview(tools: list[Tool], newest: dict[str, str | git.GitError]) -> int:
+def pinned(pin: Pin, wanted: Pin) -> str:
+    """Zeile eines gepinnten Tags: aktuell oder der neueste dazu."""
+    if wanted.tag == pin.tag:
+        return _("pinned, current ({tag})").format(tag=pin.tag)
+    return _("pinned {old}, newest {new}").format(old=pin.tag, new=wanted.tag)
+
+
+def preview(entries: list[Pin], newest: dict[str, str | git.GitError]) -> int:
     """Tabelle installiert, Config und neueste Version samt nötigem Schritt; installiert nichts."""
     found, failed = pipx.installed(), False
     rows = [[_("Tool"), _("Installed"), _("Config"), _("Newest"), ""]]
-    for tool in tools:
-        before, tag = found.get(tool.package), newest[tool.name]
-        wanted = target(tool, tag)
+    for entry in entries:
+        tag = newest[entry.name]
+        before = found.get(entry.package) if isinstance(entry, Tool) else None
+        wanted = target(entry, tag)
         if wanted is None:
             state, failed = unreadable(tag), True
-        else:
+        elif isinstance(wanted, Tool):
             result = plan(wanted, before)
             hint = _("{state} → devtools upgrade").format(state=result.text)
             state = hint if result.needed else result.text
+        else:
+            state = pinned(entry, wanted)
+            if wanted.tag != entry.tag:
+                state = _("{state} → devtools upgrade --write").format(state=state)
         version = semver(tag) if isinstance(tag, str) else "?"
         installed = before.version if before else "–"
-        rows.append([tool.label, installed, tool.minimum or "?", version, state])
+        rows.append([entry.label, installed, entry.minimum or "?", version, state])
     widths = [max(len(row[column]) for row in rows) for column in range(4)]
     for row in rows:
         cells = [cell.ljust(width) for cell, width in zip(row, widths, strict=False)]
@@ -115,40 +136,66 @@ def preview(tools: list[Tool], newest: dict[str, str | git.GitError]) -> int:
     return 1 if failed else 0
 
 
-def upgrade(tools: list[Tool], config: Path, write: bool) -> int:
+def upgrade(entries: list[Pin], config: Path, write: bool, unsourced: list[str]) -> int:
     """Bringt jedes Werkzeug auf den neuesten Release-Tag seiner Quelle; mit write auch die Config.
 
     Ohne lesbaren Tag einer Git-Quelle meldet die Zeile den Grund, die übrigen Werkzeuge laufen
-    weiter. In die Config kommt nur ein Tag, den die installierte Version danach erreicht; sonst
-    scheiterte devtools check, und install könnte es nicht beheben.
+    weiter. Ein gepinnter Tag wird nur gemeldet und mit write geschrieben. Von einem Werkzeug kommt
+    nur ein Tag in die Config, den die installierte Version danach erreicht; sonst scheiterte
+    devtools check, und install könnte es nicht beheben.
     """
-    found, newest, failed, raised = pipx.installed(), newest_tags(tools), False, []
-    for tool in ordered(tools):
-        wanted = target(tool, newest[tool.name])
+    found, newest, failed, handled = pipx.installed(), newest_tags(entries), False, []
+    for entry in ordered(entries):
+        wanted = target(entry, newest[entry.name])
         if wanted is None:
-            line(tools, tool, unreadable(newest[tool.name]))
+            line(entries, entry, unreadable(newest[entry.name]))
             failed = True
-        elif not bring(tools, wanted, found):
+        elif not isinstance(wanted, Tool):
+            line(entries, entry, pinned(entry, wanted))
+            handled.append((entry, wanted))
+        elif bring(entries, wanted, found):
+            handled.append((entry, wanted))
+        else:
             failed = True
-        elif wanted.tag != tool.tag:
-            raised.append((tool, wanted))
+    raised = [(entry, wanted) for entry, wanted in handled if wanted.tag != entry.tag]
     after = pipx.installed() if raised else {}
-    reached = [pair for pair in raised if reaches(after.get(pair[0].package), pair[1])]
+    reached = [pair for pair in raised if reaches_tag(after, *pair)]
     if write and reached:
-        write_tags(config, {key(tool): wanted.tag for tool, wanted in reached})
+        write_tags(config, {key(entry): wanted.tag for entry, wanted in reached})
     if write:
-        for tool, wanted in raised:
-            if (tool, wanted) in reached:
-                print(f"  {config}: {key(tool)} {tool.tag} → {wanted.tag}")
-                continue
-            now = after.get(tool.package)
-            text = _("{key} stays at {old}: installed {version} does not reach {new}")
-            values = {"key": key(tool), "old": tool.tag, "new": wanted.tag}
-            print(f"  {config}: {text.format(version=now.version if now else '–', **values)}")
+        for entry, wanted in handled:
+            print(f"  {config}: {written(entry, wanted, (entry, wanted) in reached, after)}")
     elif reached:
         text = _("{config} still names older tags: devtools upgrade --write")
         print(f"  {text.format(config=config)}")
+    without_source(config, unsourced)
     return 1 if failed else 0
+
+
+def without_source(config: Path, unsourced: list[str]) -> None:
+    """Je NAME_TAG ohne NAME_SOURCE eine Zeile: Den neuesten Tag kann upgrade nicht kennen."""
+    for name in unsourced:
+        text = _("{key} has no {source}: its newest tag is unknown")
+        source = f"{name.removesuffix('_TAG')}_SOURCE"
+        print(f"  {config}: {text.format(key=name, source=source)}")
+
+
+def reaches_tag(after: dict[str, Installed], entry: Pin, wanted: Pin) -> bool:
+    """Darf der neue Tag in die Config? Ein gepinnter immer, der eines Werkzeugs nur, wenn die
+    installierte Version ihn erreicht."""
+    return not isinstance(wanted, Tool) or reaches(after.get(wanted.package), wanted)
+
+
+def written(entry: Pin, wanted: Pin, reached: bool, after: dict[str, Installed]) -> str:
+    """Was --write mit dem Eintrag NAME_TAG machte: alt → neu, aktuell oder warum er bleibt."""
+    if wanted.tag == entry.tag:
+        return _("{key} current ({tag})").format(key=key(entry), tag=entry.tag)
+    if reached:
+        return f"{key(entry)} {entry.tag} → {wanted.tag}"
+    now = after.get(entry.package) if isinstance(entry, Tool) else None
+    text = _("{key} stays at {old}: installed {version} does not reach {new}")
+    values = {"key": key(entry), "old": entry.tag, "new": wanted.tag}
+    return text.format(version=now.version if now else "–", **values)
 
 
 def reaches(found: Installed | None, tool: Tool) -> bool:
@@ -156,7 +203,7 @@ def reaches(found: Installed | None, tool: Tool) -> bool:
     return found is not None and satisfies(found, tool)
 
 
-def key(tool: Tool) -> str:
+def key(tool: Pin) -> str:
     """Der Eintrag NAME_TAG des Werkzeugs in der Config."""
     return f"{tool.name.upper()}_TAG"
 
@@ -175,7 +222,7 @@ def check(tool: Tool) -> int:
     return 1
 
 
-def named(tools: list[Tool], name: str) -> Tool:
+def named(tools: list[AnyPin], name: str) -> AnyPin:
     """Das Werkzeug zu NAME, dem Präfix der Einträge, gleich in welcher Schreibung."""
     found = {tool.name: tool for tool in tools}
     if name.lower() not in found:
@@ -242,10 +289,15 @@ def main(argv: list[str] | None = None) -> int:
         if arguments.command == "install":
             return install(tools)
         if arguments.command == "upgrade":
-            chosen = [named(tools, arguments.name)] if arguments.name else tools
+            pins, unsourced = load_pins(arguments.config)
+            entries = [*tools, *pins]
+            if arguments.name:
+                entries, unsourced = [named(entries, arguments.name)], []
             if arguments.dry_run:
-                return preview(chosen, newest_tags(chosen))
-            return upgrade(chosen, arguments.config, arguments.write)
+                failed = preview(entries, newest_tags(entries))
+                without_source(arguments.config, unsourced)
+                return failed
+            return upgrade(entries, arguments.config, arguments.write, unsourced)
         tool = named(tools, arguments.name)
         if arguments.command == "command":
             print(shlex.join(tool.command()))

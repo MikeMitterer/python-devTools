@@ -114,6 +114,17 @@ PROJECTTOOLS_EDITABLE=yes
 | `NAME_EDITABLE` | no | For a working copy: `yes` installs it editable (`pipx install -e`), `no` as a fixed copy; default `yes` |
 | `NAME_LABEL` | no | Name in the output; default the package name |
 
+**Pinned tag:** `NAME_TAG` and `NAME_SOURCE` without `NAME_PACKAGE` pin a tag
+that DevTools does not install, for example the version a Makefile starts
+with `pipx run`. `devtools upgrade` shows its newest tag and writes it with
+`--write`; the other commands ignore it. Without `NAME_SOURCE` the newest tag
+cannot be found.
+
+```bash
+DEVTOOLS_TAG=v0.2.0+261101.1319.09840
+DEVTOOLS_SOURCE=git+https://github.com/MikeMitterer/python-devtools.git
+```
+
 [↑ Contents](#contents)
 
 ## Commands
@@ -136,10 +147,14 @@ tags of its repository; it never pulls or changes the working copy, and
 without a readable tag it simply keeps the config's tag. An
 editable working copy is live already, so there is nothing to install. If a
 source cannot be read, the line says why, the other tools still run, and
-`upgrade` exits with 1. `--write` only writes a tag that the installed version reaches afterwards,
-otherwise `devtools check` would fail; the output names each tag that stays.
-Without `--write` the config stays as it is; the output then says that it
-still names older tags. If the config lists
+`upgrade` exits with 1.
+
+With `--write`, `upgrade` puts the newer tags into the config and names each
+`NAME_TAG`: old → new, current, or why it stays. It only writes a tool's tag
+that the installed version reaches afterwards, otherwise `devtools check`
+would fail. Without `--write` the config stays as it is; the output then says
+that it still names older tags. A `NAME_TAG` without `NAME_SOURCE` gets a
+line of its own, because its newest tag is unknown. If the config lists
 DevTools itself, it comes last, because pipx replaces the environment it runs
 from.
 

@@ -1,6 +1,7 @@
 """devtools upgrade: neuester Release-Tag je Werkzeug, Vorschau mit -n, Config mit --write."""
 
 import json
+import subprocess
 
 from conftest import GIT_BASHLIB, GIT_TOOLS, venv
 
@@ -176,3 +177,81 @@ def test_working_copy_without_readable_tag_is_no_failure(sandbox):
     shown, _ = sandbox.run("upgrade", "-n")
     assert shown.returncode == 0, shown.stdout
     assert shown.stdout.splitlines()[2].split()[:4] == ["BashLib", "0.2.0", "0.2.0", "?"]
+
+
+DEVTOOLS_GIT = "git+https://example.invalid/python-devtools.git"
+PINNED = "v0.2.0+261101.1319.09840"
+PINNED_NEWEST = "v0.3.0+261102.1100.d0d0d"
+
+
+def pin_devtools(sandbox):
+    """DEVTOOLS_TAG mit Quelle, aber ohne Paket: gepinnt für pipx run wie in AgentLessons."""
+    sandbox.config.update(DEVTOOLS_TAG=PINNED, DEVTOOLS_SOURCE=DEVTOOLS_GIT)
+    sandbox.tags[DEVTOOLS_GIT.removeprefix("git+")] = [PINNED, PINNED_NEWEST]
+
+
+def test_pinned_tag_without_package_is_updated_but_not_installed(sandbox):
+    """NAME_TAG und NAME_SOURCE ohne NAME_PACKAGE: upgrade sucht den neuesten Tag, installiert
+    nichts und schreibt ihn mit --write."""
+    pin_devtools(sandbox)
+    result, calls = sandbox.run("upgrade")
+    assert result.returncode == 0, result.stderr
+    assert all(DEVTOOLS_GIT not in " ".join(call) for call in calls), calls
+    assert f"devtools      pinned {PINNED}, newest {PINNED_NEWEST}" in result.stdout, result.stdout
+    assert "devtools upgrade --write" in result.stdout, result.stdout
+
+    shown, _ = sandbox.run("upgrade", "-n", "devtools")
+    rows = shown.stdout.splitlines()
+    assert rows[1].split()[:4] == ["devtools", "–", "0.2.0", "0.3.0"], rows
+    assert rows[1].endswith("→ devtools upgrade --write"), rows
+
+    written, calls = sandbox.run("upgrade", "--write", "devtools")
+    assert written.returncode == 0, written.stderr
+    assert calls == [], calls
+    assert f"DEVTOOLS_TAG={PINNED_NEWEST}" in sandbox.conf.read_text()
+    assert f"DEVTOOLS_TAG {PINNED} → {PINNED_NEWEST}" in written.stdout, written.stdout
+
+
+def test_tag_without_source_is_named(sandbox):
+    """Altes Format nur mit NAME_TAG: upgrade kennt keine Quelle und sagt das, ohne zu scheitern."""
+    sandbox.config["CLI_THEME_TAG"] = "v0.1.0"
+    result, _ = sandbox.run("upgrade")
+    assert result.returncode == 0, result.stderr
+    assert "CLI_THEME_TAG has no CLI_THEME_SOURCE: its newest tag is unknown" in result.stdout
+    shown, _ = sandbox.run("upgrade", "-n")
+    assert "CLI_THEME_TAG has no CLI_THEME_SOURCE" in shown.stdout, shown.stdout
+
+
+def test_write_names_every_tag_old_to_new_or_current(sandbox):
+    """Mit --write nennt die Ausgabe je Eintrag alt → neu oder aktuell."""
+    sandbox.tags[BASHLIB_REMOTE].append(NEWEST)
+    pin_devtools(sandbox)
+    result, _ = sandbox.run("upgrade", "--write")
+    conf = ".dev-tools.conf.sh"
+    assert f"{conf}: PROJECTTOOLS_TAG current (v0.3.2+261029.1600.c7bbd)" in result.stdout
+    assert f"{conf}: BASHLIB_TAG v0.2.0+261031.2038.b22f0 → {NEWEST}" in result.stdout
+    assert f"{conf}: DEVTOOLS_TAG {PINNED} → {PINNED_NEWEST}" in result.stdout, result.stdout
+
+
+def test_written_config_stays_valid_for_bash_and_make(sandbox):
+    """Die geschriebene Config bleibt für bash -n, source und Make-include gültig."""
+    sandbox.head = "#!/usr/bin/env bash\n# Werkzeuge; Kommentar mit = und #\n\n"
+    sandbox.config["BASHLIB_LABEL"] = "BashLib  # Name in der Ausgabe"
+    sandbox.tags[BASHLIB_REMOTE].append(NEWEST)
+    pin_devtools(sandbox)
+    result, _ = sandbox.run("upgrade", "--write")
+    assert result.returncode == 0, result.stderr
+    conf = sandbox.conf
+    assert subprocess.run(["bash", "-n", str(conf)]).returncode == 0
+    sourced = subprocess.run(
+        ["bash", "-c", 'source "$1"; printf "%s %s" "$BASHLIB_TAG" "$DEVTOOLS_TAG"', "-", conf],
+        capture_output=True,
+        text=True,
+    )
+    assert sourced.stdout == f"{NEWEST} {PINNED_NEWEST}", sourced.stderr
+    makefile = sandbox.root / "Makefile"
+    makefile.write_text(
+        "include .dev-tools.conf.sh\nshow:\n\t@printf '%s %s' '$(BASHLIB_TAG)' '$(DEVTOOLS_TAG)'\n"
+    )
+    made = subprocess.run(["make", "-s", "show"], cwd=sandbox.root, capture_output=True, text=True)
+    assert made.stdout == f"{NEWEST} {PINNED_NEWEST}", made.stderr
