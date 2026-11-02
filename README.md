@@ -52,6 +52,10 @@ locale (`LANGUAGE`, `LC_ALL`, `LANG`).
 - **Correct version of a working copy:** pipx freezes the package version of
   an editable install; DevTools reads the version from the working copy's
   `pyproject.toml` instead.
+- **Upgrade to the newest release:** `devtools upgrade` finds the newest
+  release tag of each source, from the Git remote or the working copy's
+  repository, and installs it; `-n` shows installed, config and newest
+  version side by side, `--write` puts the newer tags into the config.
 - **Minimum version check:** `devtools check NAME` fails with the install
   command, ready for a Makefile.
 - **Standard library only:** Python 3.11 or later, no further packages at
@@ -118,11 +122,26 @@ PROJECTTOOLS_EDITABLE=yes
 |---|---|
 | `devtools status` | Shows each tool's state and what `install` would do; installs nothing |
 | `devtools install` | Installs missing or older tools from source and tag (`pipx install --force`) |
+| `devtools upgrade [NAME]` | Installs the newest release tag of each source; `-n` (`--dry-run`) only shows installed, config and newest version, `--write` also writes the newer tags into the config |
 | `devtools check NAME` | Exit 0 if the installed version reaches the tag's version, otherwise exit 1 with the install command |
 | `devtools command NAME` | Prints the install command for the tool |
 
 `NAME` is the prefix of the entries in lower case, for example
 `projecttools`. `devtools --help` shows all options.
+
+`upgrade` takes release tags of the form `vX.Y.Z`, optionally with a build
+part such as `+261031.2038.b22f0`; other tags and pre-releases do not count.
+For a Git source it asks the remote (`git ls-remote`), for a working copy the
+tags of its repository; it never pulls or changes the working copy, and
+without a readable tag it simply keeps the config's tag. An
+editable working copy is live already, so there is nothing to install. If a
+source cannot be read, the line says why, the other tools still run, and
+`upgrade` exits with 1. `--write` only writes a tag that the installed version reaches afterwards,
+otherwise `devtools check` would fail; the output names each tag that stays.
+Without `--write` the config stays as it is; the output then says that it
+still names older tags. If the config lists
+DevTools itself, it comes last, because pipx replaces the environment it runs
+from.
 
 [↑ Contents](#contents)
 

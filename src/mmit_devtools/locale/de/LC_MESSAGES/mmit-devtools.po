@@ -95,3 +95,51 @@ msgstr "installiert {version} ({source})"
 
 msgid "updated from {old} to {new} ({source})"
 msgstr "aktualisiert von {old} auf {new} ({source})"
+
+msgid "Tool"
+msgstr "Werkzeug"
+
+msgid "Installed"
+msgstr "Installiert"
+
+msgid "Config"
+msgstr "Config"
+
+msgid "Newest"
+msgstr "Neueste"
+
+msgid "also write the newer tags into the config"
+msgstr "die neueren Tags auch in die Config schreiben"
+
+msgid "bring each tool to the newest release tag of its source"
+msgstr "jedes Werkzeug auf den neuesten Release-Tag seiner Quelle bringen"
+
+msgid "git is missing from PATH"
+msgstr "git fehlt im PATH"
+
+msgid "git took longer than {seconds} s"
+msgstr "git brauchte länger als {seconds} s"
+
+msgid "newest tag not readable: {error}"
+msgstr "neuester Tag nicht lesbar: {error}"
+
+msgid "no release tag (vX.Y.Z) in {source}"
+msgstr "kein Release-Tag (vX.Y.Z) in {source}"
+
+msgid "only this tool"
+msgstr "nur dieses Werkzeug"
+
+msgid "show installed, config and newest version, install nothing"
+msgstr "installierte, Config- und neueste Version zeigen, nichts installieren"
+
+msgid "{command} failed"
+msgstr "{command} scheiterte"
+
+msgid "{config} still names older tags: devtools upgrade --write"
+msgstr "{config} nennt noch ältere Tags: devtools upgrade --write"
+
+msgid "{state} → devtools upgrade"
+msgstr "{state} → devtools upgrade"
+
+msgid "{key} stays at {old}: installed {version} does not reach {new}"
+msgstr "{key} bleibt bei {old}: installiert ist {version}, das erreicht {new} nicht"

@@ -15,6 +15,8 @@ from mmit_devtools.versions import semver
 
 CONFIG_NAME = ".dev-tools.conf.sh"
 ENTRY = re.compile(r"^([A-Z][A-Z0-9_]*)=(.*)$")
+# Einrückung, Name und Wert bis Leerraum oder Kommentar; der Rest der Zeile bleibt beim Schreiben.
+VALUE = re.compile(r"^(\s*)([A-Z][A-Z0-9_]*)=([^\s#]*)")
 GIT_PREFIXES = ("git+", "http://", "https://")
 YES, NO = ("yes", "true", "1"), ("no", "false", "0")
 
@@ -80,6 +82,22 @@ def read_entries(path: Path) -> dict[str, str]:
         if match:
             entries[match.group(1)] = match.group(2).strip()
     return entries
+
+
+def write_tags(path: Path, tags: dict[str, str]) -> None:
+    """Ersetzt den Wert der genannten NAME_TAG-Einträge; alle übrigen Zeichen bleiben.
+
+    newline="": Zeilenenden wie \\r\\n bleiben, wie sie sind.
+    """
+    with path.open(encoding="utf-8", newline="") as stream:
+        lines = stream.readlines()
+    for index, raw in enumerate(lines):
+        match = VALUE.match(raw)
+        if match and match.group(2) in tags:
+            lines[index] = f"{match.group(1)}{match.group(2)}={tags[match.group(2)]}"
+            lines[index] += raw[match.end() :]
+    with path.open("w", encoding="utf-8", newline="") as stream:
+        stream.writelines(lines)
 
 
 def load_tools(path: Path) -> list[Tool]:

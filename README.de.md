@@ -54,6 +54,10 @@ deutsch, je nach Spracheinstellung (`LANGUAGE`, `LC_ALL`, `LANG`).
 - **Richtige Version einer Arbeitskopie:** pipx friert die Paketversion einer
   bearbeitbaren Installation ein; DevTools liest die Version stattdessen aus
   der `pyproject.toml` der Arbeitskopie.
+- **Auf den neuesten Release:** `devtools upgrade` sucht je Quelle den
+  neuesten Release-Tag, vom Git-Remote oder aus dem Repo der Arbeitskopie,
+  und installiert ihn; `-n` zeigt installierte, Config- und neueste Version
+  nebeneinander, `--write` trägt die neueren Tags in die Config ein.
 - **Prüfung der Mindestversion:** `devtools check NAME` scheitert mit dem
   Installationsbefehl, passend für ein Makefile.
 - **Nur Standardbibliothek:** Python 3.11 oder neuer, zur Laufzeit keine
@@ -121,11 +125,26 @@ PROJECTTOOLS_EDITABLE=yes
 |---|---|
 | `devtools status` | Zeigt je Werkzeug den Stand und was `install` tun würde; installiert nichts |
 | `devtools install` | Installiert fehlende oder ältere Werkzeuge aus Quelle und Tag (`pipx install --force`) |
+| `devtools upgrade [NAME]` | Installiert je Quelle den neuesten Release-Tag; `-n` (`--dry-run`) zeigt nur installierte, Config- und neueste Version, `--write` schreibt die neueren Tags auch in die Config |
 | `devtools check NAME` | Exit 0, wenn die installierte Version die des Tags erreicht, sonst Exit 1 mit dem Installationsbefehl |
 | `devtools command NAME` | Gibt den Installationsbefehl des Werkzeugs aus |
 
 `NAME` ist das Präfix der Einträge in Kleinbuchstaben, etwa `projecttools`.
 `devtools --help` zeigt alle Optionen.
+
+`upgrade` nimmt Release-Tags der Form `vX.Y.Z`, wahlweise mit Build-Teil wie
+`+261031.2038.b22f0`; andere Tags und Vorabversionen zählen nicht. Bei einer
+Git-Quelle fragt es das Remote (`git ls-remote`), bei einer Arbeitskopie die
+Tags ihres Repos; die Arbeitskopie selbst holt und ändert es nie, und ohne
+lesbaren Tag bleibt sie einfach beim Tag der Config. Eine
+bearbeitbare Arbeitskopie ist schon live eingebunden, dort gibt es nichts zu
+installieren. Ist eine Quelle nicht lesbar, nennt die Zeile den Grund, die
+übrigen Werkzeuge laufen weiter, und `upgrade` endet mit Exit 1. `--write`
+schreibt nur einen Tag, den die installierte Version danach erreicht, sonst
+scheiterte `devtools check`; die Ausgabe nennt jeden Tag, der bleibt. Ohne
+`--write` bleibt die Config, wie sie ist; die Ausgabe sagt dann, dass sie noch
+ältere Tags nennt. Steht DevTools selbst in der Config, kommt es zuletzt dran,
+weil pipx dabei die Umgebung ersetzt, aus der es läuft.
 
 [↑ Übersicht](#übersicht)
 

@@ -1,6 +1,6 @@
 """Abgleich zwischen Config und pipx: was ein Werkzeug braucht und was install daraus macht."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from mmit_devtools.config import Tool
@@ -25,6 +25,13 @@ def same_copy(tool: Tool, found: Installed) -> bool:
 def satisfies(found: Installed, tool: Tool) -> bool:
     """Erfüllt die installierte Version die Mindestversion aus dem Tag?"""
     return as_tuple(found.version) >= as_tuple(tool.minimum)
+
+
+def upgraded(tool: Tool, newest: str) -> Tool:
+    """Das Werkzeug mit dem neuesten Tag, wenn er über dem Tag der Config liegt."""
+    if as_tuple(newest) > as_tuple(tool.minimum):
+        return replace(tool, tag=newest)
+    return tool
 
 
 def plan(tool: Tool, found: Installed | None) -> Plan:
