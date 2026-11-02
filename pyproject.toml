@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mmit-devtools"
-version = "0.2.0"
+version = "0.3.0"
 description = "Check, show and install the pipx development tools a project lists in .dev-tools.conf.sh"
 readme = "README.md"
 license = "EUPL-1.2"
