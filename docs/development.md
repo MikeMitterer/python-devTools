@@ -53,6 +53,19 @@ Commit die Doku prüft. Ein zweiter Aufruf ist
 schnell; neu installiert wird nur, wenn `pyproject.toml` sich geändert hat.
 Danach steht `.venv/bin/devtools` bereit.
 
+```bash
+make install
+```
+
+`install` bringt DevTools selbst aus diesem Stand auf den Rechner: Es baut ein
+Wheel nach `build/wheel` und installiert es mit
+`pipx install --force <wheel>[theme]`, also mit den Farben von CLITheme.
+Ein Wheel statt `pipx install -e`, weil ein bearbeitbarer Link auf einen
+Worktree ins Leere zeigt, sobald der Worktree aufgeräumt ist. Wer an DevTools
+arbeitet und Änderungen sofort im Befehl sehen will, nimmt
+`pipx install -e` (siehe `make hints`). `make install-tools` ist etwas
+anderes: Es installiert die Werkzeuge aus `.dev-tools.conf.sh`, nicht DevTools.
+
 [↑ Übersicht](#übersicht)
 
 ## Tests

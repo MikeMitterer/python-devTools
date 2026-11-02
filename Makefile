@@ -131,6 +131,7 @@ hints: ## Reihenfolge für den ersten Start und Installationswege anzeigen
 	@echo "$(THEME_INDENT_GROUP)$(THEME_COLOR_GROUP)devtools benutzen$(RESET)"
 	@$(call hint_row,Aus Git,$(if $(REPO_URL),pipx install 'git+$(REPO_URL).git@$(RELEASE_TAG)',$(NO_REMOTE)))
 	@$(call hint_row,Ohne Installation,$(if $(REPO_URL),pipx run --spec 'git+$(REPO_URL).git@$(RELEASE_TAG)' devtools status,$(NO_REMOTE)))
+	@$(call hint_row,Aus diesem Stand,make install)
 	@$(call hint_row,Arbeitskopie,pipx install -e $${WORKSPACE_SQ})
 	@echo
 	@echo "$(THEME_INDENT_GROUP)$(THEME_COLOR_GROUP)Werkzeuge$(RESET)"
@@ -180,6 +181,21 @@ setup: $(SETUP_STAMPS) ## Git-Hooks, .venv mit dem Paket und den Prüfwerkzeugen
 .PHONY: install-tools
 install-tools: require-setup ## Werkzeuge aus .dev-tools.conf.sh mit pipx installieren oder aktualisieren
 	@$(DEVTOOLS) install
+
+# DevTools selbst als Wheel aus diesem Stand, samt Extra theme (Farben, T-7). Kein bearbeitbarer
+# Link (-e): Er zeigte nach dem Aufräumen eines Worktrees ins Leere. WHEEL_DIR lässt sich
+# überschreiben (die Tests bauen in einen temporären Ordner) und geht deshalb über die Umgebung.
+export WHEEL_DIR ?= build/wheel
+
+.PHONY: install
+install: require-setup ## devtools aus diesem Stand auf dem Rechner, mit Farben (pipx)
+	@command -v pipx >/dev/null || { \
+		echo -e "  $(RED)✗$(RESET) pipx fehlt; etwa mit brew install pipx (https://pipx.pypa.io)" >&2; exit 1; }
+	@rm -rf "$${WHEEL_DIR}"
+	@$(PYTHON) -m pip wheel -q --disable-pip-version-check --no-deps -w "$${WHEEL_DIR}" . || { \
+		echo -e "  $(RED)✗$(RESET) Wheel nicht gebaut: Netz und Paketindex prüfen" >&2; exit 1; }
+	@wheel=$$(ls "$${WHEEL_DIR}"/mmit_devtools-*.whl) && pipx install --force --quiet "$$wheel[theme]"
+	@echo -e "  $(GREEN)✓$(RESET) $$("$$(pipx environment --value PIPX_BIN_DIR)/devtools" --version) installiert (pipx)"
 
 # Stempeldatei: nur setup legt sie an. Nicht .venv/bin/python als Ziel nehmen; es ist ein Link
 # aufs System-Python und hätte dessen Zeitstempel.
