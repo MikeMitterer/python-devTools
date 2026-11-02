@@ -63,7 +63,7 @@ NO_DEVTOOLS  = echo -e "  $(RED)✗$(RESET) devtools fehlt, erst einrichten: $(Y
 # Was setup herstellt und require-setup prüft: Paket und Werkzeuge in der .venv und die .mo.
 CATALOGS     := $(patsubst %.po,%.mo,$(wildcard src/mmit_devtools/locale/*/LC_MESSAGES/*.po))
 SETUP_STAMPS := $(VENV)/.installed $(CATALOGS)
-SHELL_FILES := .githooks/pre-commit .dev-tools.conf.sh .docs-check.conf.sh .repo-status.conf.sh
+SHELL_FILES := .githooks/pre-commit scripts/install-devtools.sh .dev-tools.conf.sh .docs-check.conf.sh .repo-status.conf.sh
 
 # ─── Hilfe ───────────────────────────────────────────────────────────────────
 
@@ -182,20 +182,11 @@ setup: $(SETUP_STAMPS) ## Git-Hooks, .venv mit dem Paket und den Prüfwerkzeugen
 install-tools: require-setup ## Werkzeuge aus .dev-tools.conf.sh mit pipx installieren oder aktualisieren
 	@$(DEVTOOLS) install
 
-# DevTools selbst als Wheel aus diesem Stand, samt Extra theme (Farben, T-7). Kein bearbeitbarer
-# Link (-e): Er zeigte nach dem Aufräumen eines Worktrees ins Leere. WHEEL_DIR lässt sich
-# überschreiben (die Tests bauen in einen temporären Ordner) und geht deshalb über die Umgebung.
-export WHEEL_DIR ?= build/wheel
-
+# DevTools selbst als Wheel aus diesem Stand, samt Extra theme (Farben, T-7); Ablauf und Gründe
+# in scripts/install-devtools.sh.
 .PHONY: install
 install: require-setup ## devtools aus diesem Stand auf dem Rechner, mit Farben (pipx)
-	@command -v pipx >/dev/null || { \
-		echo -e "  $(RED)✗$(RESET) pipx fehlt; etwa mit brew install pipx (https://pipx.pypa.io)" >&2; exit 1; }
-	@rm -rf "$${WHEEL_DIR}"
-	@$(PYTHON) -m pip wheel -q --disable-pip-version-check --no-deps -w "$${WHEEL_DIR}" . || { \
-		echo -e "  $(RED)✗$(RESET) Wheel nicht gebaut: Netz und Paketindex prüfen" >&2; exit 1; }
-	@wheel=$$(ls "$${WHEEL_DIR}"/mmit_devtools-*.whl) && pipx install --force --quiet "$$wheel[theme]"
-	@echo -e "  $(GREEN)✓$(RESET) $$("$$(pipx environment --value PIPX_BIN_DIR)/devtools" --version) installiert (pipx)"
+	@scripts/install-devtools.sh $(PYTHON)
 
 # Stempeldatei: nur setup legt sie an. Nicht .venv/bin/python als Ziel nehmen; es ist ein Link
 # aufs System-Python und hätte dessen Zeitstempel.

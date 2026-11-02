@@ -57,11 +57,15 @@ Danach steht `.venv/bin/devtools` bereit.
 make install
 ```
 
-`install` bringt DevTools selbst aus diesem Stand auf den Rechner: Es baut ein
-Wheel nach `build/wheel` und installiert es mit
-`pipx install --force <wheel>[theme]`, also mit den Farben von CLITheme.
-Ein Wheel statt `pipx install -e`, weil ein bearbeitbarer Link auf einen
-Worktree ins Leere zeigt, sobald der Worktree aufgeräumt ist. Wer an DevTools
+`install` bringt DevTools selbst aus diesem Stand auf den Rechner, mit den
+Farben von CLITheme (`scripts/install-devtools.sh`). Es baut ein Wheel in einem
+temporären Ordner, legt es unter `${XDG_CACHE_HOME:-~/.cache}/mmit-devtools/`
+ab, ersetzt dort ein älteres DevTools-Wheel und installiert es mit
+`pipx install --force "mmit-devtools[theme] @ file://<wheel>"`. Nur in dieser
+Form installiert pipx das Extra mit; `<wheel>[theme]` übergeht es. Das Wheel
+liegt im Cache statt im Checkout, weil pipx sich die Datei als Quelle merkt:
+`pipx reinstall` klappt so auch, nachdem ein Worktree aufgeräumt ist. Aus
+demselben Grund kein `pipx install -e`. Wer an DevTools
 arbeitet und Änderungen sofort im Befehl sehen will, nimmt
 `pipx install -e` (siehe `make hints`). `make install-tools` ist etwas
 anderes: Es installiert die Werkzeuge aus `.dev-tools.conf.sh`, nicht DevTools.

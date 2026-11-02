@@ -23,8 +23,12 @@ liegt.
   `.dev-tools.conf.sh` und ändert dort nur den Wert vorhandener
   `NAME_TAG`-Einträge; alle übrigen Zeichen bleiben.
 - **Installationen:** Die venvs verwaltet pipx in seinen eigenen Ordnern.
-- **Logs und Zwischenstände:** keine. DevTools legt keine Dateien an und
-  speichert nichts zwischen.
+- **Logs und Zwischenstände:** keine. Der Befehl `devtools` legt keine Dateien
+  an und speichert nichts zwischen.
+- **make install:** baut in einem temporären Ordner, den es danach löscht, und
+  legt das Wheel unter `${XDG_CACHE_HOME:-~/.cache}/mmit-devtools/` ab. Dort
+  löscht es nur ältere `mmit_devtools-*.whl`, sonst nichts; Ordner aus
+  Variablen des Aufrufers löscht es nie.
 
 ## Geheimnisse
 
