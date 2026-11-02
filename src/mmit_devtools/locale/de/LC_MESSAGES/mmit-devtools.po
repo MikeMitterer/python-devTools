@@ -140,3 +140,6 @@ msgstr "{config} nennt noch ältere Tags: devtools upgrade --write"
 
 msgid "{state} → devtools upgrade"
 msgstr "{state} → devtools upgrade"
+
+msgid "{key} stays at {old}: installed {version} does not reach {new}"
+msgstr "{key} bleibt bei {old}: installiert ist {version}, das erreicht {new} nicht"

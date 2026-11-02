@@ -135,10 +135,13 @@ PROJECTTOOLS_EDITABLE=yes
 `upgrade` nimmt Release-Tags der Form `vX.Y.Z`, wahlweise mit Build-Teil wie
 `+261031.2038.b22f0`; andere Tags und Vorabversionen zählen nicht. Bei einer
 Git-Quelle fragt es das Remote (`git ls-remote`), bei einer Arbeitskopie die
-Tags ihres Repos; die Arbeitskopie selbst holt und ändert es nie. Eine
+Tags ihres Repos; die Arbeitskopie selbst holt und ändert es nie, und ohne
+lesbaren Tag bleibt sie einfach beim Tag der Config. Eine
 bearbeitbare Arbeitskopie ist schon live eingebunden, dort gibt es nichts zu
 installieren. Ist eine Quelle nicht lesbar, nennt die Zeile den Grund, die
-übrigen Werkzeuge laufen weiter, und `upgrade` endet mit Exit 1. Ohne
+übrigen Werkzeuge laufen weiter, und `upgrade` endet mit Exit 1. `--write`
+schreibt nur einen Tag, den die installierte Version danach erreicht, sonst
+scheiterte `devtools check`; die Ausgabe nennt jeden Tag, der bleibt. Ohne
 `--write` bleibt die Config, wie sie ist; die Ausgabe sagt dann, dass sie noch
 ältere Tags nennt. Steht DevTools selbst in der Config, kommt es zuletzt dran,
 weil pipx dabei die Umgebung ersetzt, aus der es läuft.

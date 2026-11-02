@@ -132,11 +132,14 @@ PROJECTTOOLS_EDITABLE=yes
 `upgrade` takes release tags of the form `vX.Y.Z`, optionally with a build
 part such as `+261031.2038.b22f0`; other tags and pre-releases do not count.
 For a Git source it asks the remote (`git ls-remote`), for a working copy the
-tags of its repository; it never pulls or changes the working copy. An
+tags of its repository; it never pulls or changes the working copy, and
+without a readable tag it simply keeps the config's tag. An
 editable working copy is live already, so there is nothing to install. If a
 source cannot be read, the line says why, the other tools still run, and
-`upgrade` exits with 1. Without `--write` the config stays as it is; the
-output then says that it still names older tags. If the config lists
+`upgrade` exits with 1. `--write` only writes a tag that the installed version reaches afterwards,
+otherwise `devtools check` would fail; the output names each tag that stays.
+Without `--write` the config stays as it is; the output then says that it
+still names older tags. If the config lists
 DevTools itself, it comes last, because pipx replaces the environment it runs
 from.
 

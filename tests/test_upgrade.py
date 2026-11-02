@@ -130,3 +130,49 @@ def test_devtools_itself_comes_last(sandbox):
         assert result.returncode == 0, result.stderr
         assert calls[-1][-1].startswith(f"{remote}@"), calls
         assert result.stdout.index("mmit-devtools") > result.stdout.index("BashLib"), result.stdout
+
+
+def test_write_keeps_tag_that_the_installed_version_does_not_reach(sandbox):
+    """R1-F1: --write schreibt nur Tags, die die installierte Version danach erreicht; sonst
+    scheiterte check, und install könnte es nicht beheben."""
+    local = sandbox.working_copy("mmit-bashlib", "0.2.0")
+    sandbox.state["mmit-bashlib"] = venv(str(local), "0.2.0", editable=True)
+    sandbox.tags[BASHLIB_REMOTE].append(NEWEST)
+    result, calls = sandbox.run("upgrade", "--write")
+    assert result.returncode == 0, result.stderr
+    assert calls == [], calls
+    assert "BASHLIB_TAG=v0.2.0+261031.2038.b22f0" in sandbox.conf.read_text()
+    assert (
+        f"BASHLIB_TAG stays at v0.2.0+261031.2038.b22f0: installed 0.2.0 does not reach {NEWEST}"
+        in result.stdout
+    ), result.stdout
+    checked, _ = sandbox.run("check", "bashlib")
+    assert checked.returncode == 0, checked.stderr
+
+
+def test_write_keeps_local_tag_ahead_of_the_working_copy(sandbox):
+    """R1-F1: Arbeitskopie als Quelle mit pyproject 0.3.0, das Repo hat schon v0.4.0."""
+    local = sandbox.working_copy("mmit-bashlib", "0.3.0")
+    sandbox.config["BASHLIB_SOURCE"] = "mmit-bashlib"
+    sandbox.state["mmit-bashlib"] = venv(str(local.resolve()), "0.3.0", editable=True)
+    sandbox.tags[str(local.resolve())] = ["v0.3.0+261102.1000.0abc1", "v0.4.0+261102.1200.0abc2"]
+    result, _ = sandbox.run("upgrade", "--write")
+    assert result.returncode == 0, result.stderr
+    assert "BASHLIB_TAG=v0.2.0+261031.2038.b22f0" in sandbox.conf.read_text()
+    checked, _ = sandbox.run("check", "bashlib")
+    assert checked.returncode == 0, checked.stderr
+
+
+def test_working_copy_without_readable_tag_is_no_failure(sandbox):
+    """R1-F2: Eine Arbeitskopie als Quelle braucht keinen Tag zum Installieren; ohne lesbaren Tag
+    meldet upgrade sie als Arbeitskopie und endet mit Exit 0."""
+    local = sandbox.working_copy("mmit-bashlib", "0.2.0")
+    sandbox.config["BASHLIB_SOURCE"] = "mmit-bashlib"
+    sandbox.state["mmit-bashlib"] = venv(str(local.resolve()), "0.2.0", editable=True)
+    result, calls = sandbox.run("upgrade", "--write")
+    assert result.returncode == 0, result.stdout
+    assert calls == [], calls
+    assert "BashLib       current (0.2.0, working copy" in result.stdout, result.stdout
+    shown, _ = sandbox.run("upgrade", "-n")
+    assert shown.returncode == 0, shown.stdout
+    assert shown.stdout.splitlines()[2].split()[:4] == ["BashLib", "0.2.0", "0.2.0", "?"]

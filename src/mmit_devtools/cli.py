@@ -81,58 +81,90 @@ def unreadable(error: git.GitError) -> str:
     return _("newest tag not readable: {error}").format(error=error)
 
 
+def target(tool: Tool, tag: str | git.GitError) -> Tool | None:
+    """Das Werkzeug mit dem neuesten Tag; None, wenn eine Git-Quelle keinen lesbaren Tag hat.
+
+    Eine Arbeitskopie als Quelle braucht zum Installieren keinen Tag; ohne lesbaren Tag bleibt
+    sie bei dem der Config.
+    """
+    if isinstance(tag, str):
+        return upgraded(tool, tag)
+    return tool if tool.local else None
+
+
 def preview(tools: list[Tool], newest: dict[str, str | git.GitError]) -> int:
     """Tabelle installiert, Config und neueste Version samt nötigem Schritt; installiert nichts."""
-    found = pipx.installed()
+    found, failed = pipx.installed(), False
     rows = [[_("Tool"), _("Installed"), _("Config"), _("Newest"), ""]]
     for tool in tools:
         before, tag = found.get(tool.package), newest[tool.name]
-        if isinstance(tag, git.GitError):
-            state, version = unreadable(tag), "?"
+        wanted = target(tool, tag)
+        if wanted is None:
+            state, failed = unreadable(tag), True
         else:
-            result = plan(upgraded(tool, tag), before)
-            state = _("{state} → devtools upgrade").format(state=result.text)
-            state, version = (state if result.needed else result.text), semver(tag)
+            result = plan(wanted, before)
+            hint = _("{state} → devtools upgrade").format(state=result.text)
+            state = hint if result.needed else result.text
+        version = semver(tag) if isinstance(tag, str) else "?"
         installed = before.version if before else "–"
         rows.append([tool.label, installed, tool.minimum or "?", version, state])
     widths = [max(len(row[column]) for row in rows) for column in range(4)]
     for row in rows:
         cells = [cell.ljust(width) for cell, width in zip(row, widths, strict=False)]
         print(f"  {'  '.join([*cells, row[4]]).rstrip()}")
-    return 0 if all(isinstance(tag, str) for tag in newest.values()) else 1
+    return 1 if failed else 0
 
 
 def upgrade(tools: list[Tool], config: Path, write: bool) -> int:
     """Bringt jedes Werkzeug auf den neuesten Release-Tag seiner Quelle; mit write auch die Config.
 
-    Ohne lesbaren Tag meldet die Zeile den Grund, die übrigen Werkzeuge laufen weiter.
+    Ohne lesbaren Tag einer Git-Quelle meldet die Zeile den Grund, die übrigen Werkzeuge laufen
+    weiter. In die Config kommt nur ein Tag, den die installierte Version danach erreicht; sonst
+    scheiterte devtools check, und install könnte es nicht beheben.
     """
-    found, newest, failed, tags = pipx.installed(), newest_tags(tools), False, {}
+    found, newest, failed, raised = pipx.installed(), newest_tags(tools), False, []
     for tool in ordered(tools):
-        tag = newest[tool.name]
-        if isinstance(tag, git.GitError):
-            line(tools, tool, unreadable(tag))
+        wanted = target(tool, newest[tool.name])
+        if wanted is None:
+            line(tools, tool, unreadable(newest[tool.name]))
             failed = True
-            continue
-        target = upgraded(tool, tag)
-        if not bring(tools, target, found):
+        elif not bring(tools, wanted, found):
             failed = True
-        elif target.tag != tool.tag:
-            tags[f"{tool.name.upper()}_TAG"] = (tool.tag, target.tag)
-    if tags and write:
-        write_tags(config, {key: new for key, (_old, new) in tags.items()})
-        for key, (old, new) in tags.items():
-            print(f"  {config}: {key} {old} → {new}")
-    elif tags:
+        elif wanted.tag != tool.tag:
+            raised.append((tool, wanted))
+    after = pipx.installed() if raised else {}
+    reached = [pair for pair in raised if reaches(after.get(pair[0].package), pair[1])]
+    if write and reached:
+        write_tags(config, {key(tool): wanted.tag for tool, wanted in reached})
+    if write:
+        for tool, wanted in raised:
+            if (tool, wanted) in reached:
+                print(f"  {config}: {key(tool)} {tool.tag} → {wanted.tag}")
+                continue
+            now = after.get(tool.package)
+            text = _("{key} stays at {old}: installed {version} does not reach {new}")
+            values = {"key": key(tool), "old": tool.tag, "new": wanted.tag}
+            print(f"  {config}: {text.format(version=now.version if now else '–', **values)}")
+    elif reached:
         text = _("{config} still names older tags: devtools upgrade --write")
         print(f"  {text.format(config=config)}")
     return 1 if failed else 0
 
 
+def reaches(found: Installed | None, tool: Tool) -> bool:
+    """Erreicht die installierte Version den Tag des Werkzeugs?"""
+    return found is not None and satisfies(found, tool)
+
+
+def key(tool: Tool) -> str:
+    """Der Eintrag NAME_TAG des Werkzeugs in der Config."""
+    return f"{tool.name.upper()}_TAG"
+
+
 def check(tool: Tool) -> int:
     """Mindestversion aus dem Tag; sonst Meldung samt Installationsbefehl und Exit 1."""
     found = pipx.installed().get(tool.package)
-    if found is not None and satisfies(found, tool):
+    if reaches(found, tool):
         return 0
     if found is None:
         text = _("✗ {label} missing (requires {minimum} or later): {command}")
