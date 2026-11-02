@@ -65,7 +65,9 @@ deutsch, je nach Spracheinstellung (`LANGUAGE`, `LC_ALL`, `LANG`).
 - **Farben auf Wunsch:** Mit dem Extra `theme` übernimmt die Ausgabe die
   Farben des gemeinsamen
   [CLITheme](https://github.com/MikeMitterer/python-clitheme), nur im
-  Terminal und nie mit `NO_COLOR`; ohne das Extra bleibt sie reiner Text.
+  Terminal und nie mit `NO_COLOR`, und jede Ausgabe samt Hilfe endet wie in
+  allen Apps mit CLITheme mit einer Leerzeile; ohne das Extra bleibt sie reiner
+  Text.
 
 [↑ Übersicht](#übersicht)
 

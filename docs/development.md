@@ -128,7 +128,7 @@ kein Oberflächentext steht roh im Code.
 | `src/mmit_devtools/git.py` | Zugriff auf git: neuester Release-Tag einer Git-Quelle (`git ls-remote`) oder Arbeitskopie (`git tag`) |
 | `src/mmit_devtools/sync.py` | Abgleich von Config und Installation: was zu tun ist und was geschah |
 | `src/mmit_devtools/versions.py` | SemVer aus einem Tag, Version einer Arbeitskopie aus `pyproject.toml` |
-| `src/mmit_devtools/style.py` | Ausgabe einer Zeile mit Rollen des CLI-Themes; ohne das Extra `theme` reiner Text |
+| `src/mmit_devtools/style.py` | Ausgabe einer Zeile mit Rollen des CLI-Themes, Abschluss mit Leerzeile und Parser aus CLITheme; ohne das Extra `theme` reiner Text |
 | `src/mmit_devtools/i18n.py` | `_()` über gettext, Kataloge unter `src/mmit_devtools/locale/` |
 | `setup.py` | Paketbau: übersetzt die Kataloge beim Bauen nach `.mo` |
 

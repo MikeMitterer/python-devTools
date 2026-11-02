@@ -28,9 +28,9 @@ def theme(tmp_path, monkeypatch):
     monkeypatch.delenv("NO_COLOR", raising=False)
     monkeypatch.delenv("CLI_THEME", raising=False)
     install_themes()
-    style.theme_styles.cache_clear()
+    style.themed.cache_clear()
     yield
-    style.theme_styles.cache_clear()
+    style.themed.cache_clear()
 
 
 def test_terminal_shows_theme_colors_around_the_same_text(theme):
@@ -56,8 +56,8 @@ def test_pipe_and_no_color_give_plain_text(theme, monkeypatch):
 
 def test_without_cli_theme_output_stays_plain(theme, monkeypatch):
     """Ohne das Extra theme (kein mmit-cli-theme): reiner Text, auch im Terminal."""
-    monkeypatch.setattr(style, "styles", None)
-    style.theme_styles.cache_clear()
+    monkeypatch.setattr(style, "Output", None)
+    style.themed.cache_clear()
     stream = Terminal()
     style.emit(PARTS, stream)
     assert stream.getvalue() == PLAIN
@@ -76,3 +76,17 @@ def test_long_line_stays_one_line_in_narrow_terminal(theme, monkeypatch, no_colo
     stream = Terminal()
     style.emit(LONG, stream)
     assert ESCAPE.sub("", stream.getvalue()) == "".join(text for text, _ in LONG) + "\n"
+
+
+def test_finish_ends_each_written_stream_with_one_blank_line(theme):
+    """T-10: Der Abschluss von CLITheme setzt je Strom mit Ausgabe genau eine Leerzeile."""
+    out, err, silent = io.StringIO(), io.StringIO(), io.StringIO()
+    style.emit(PARTS, out)
+    style.emit(PARTS, out)
+    style.emit(PARTS, err)
+    style.finish()
+    assert out.getvalue() == PLAIN * 2 + "\n"
+    assert err.getvalue() == PLAIN + "\n"
+    assert silent.getvalue() == ""
+    style.finish()
+    assert out.getvalue() == PLAIN * 2 + "\n", "ein zweiter Abschluss ohne neue Ausgabe"

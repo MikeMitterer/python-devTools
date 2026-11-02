@@ -19,7 +19,7 @@ from mmit_devtools.config import (
 )
 from mmit_devtools.i18n import _
 from mmit_devtools.pipx import Installed
-from mmit_devtools.style import emit
+from mmit_devtools.style import Parser, emit, finish
 from mmit_devtools.sync import done, plan, satisfies, upgraded
 from mmit_devtools.versions import semver
 
@@ -265,7 +265,7 @@ def named[T: Pin](tools: list[T], name: str) -> T:
 
 def parser() -> argparse.ArgumentParser:
     """Argumente: status, install, upgrade, check NAME, command NAME, --config und --version."""
-    result = argparse.ArgumentParser(
+    result = Parser(
         prog="devtools",
         description=_(
             "Show, install and check the development tools from {config} with pipx."
@@ -309,11 +309,19 @@ def parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Einstieg des Befehls devtools; Fehler in Config oder pipx enden mit Exit 1."""
+    """Einstieg des Befehls devtools; jede Ausgabe endet mit dem Abschluss von CLITheme."""
     arguments = parser().parse_args(argv)
     if arguments.command is None:
         parser().print_help()
         return 0
+    try:
+        return run(arguments)
+    finally:
+        finish()
+
+
+def run(arguments: argparse.Namespace) -> int:
+    """Führt den Befehl aus; Fehler in Config oder pipx enden mit Exit 1."""
     try:
         tools = load_tools(arguments.config)
         if arguments.command == "status":
