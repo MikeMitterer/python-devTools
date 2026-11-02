@@ -28,9 +28,9 @@ def theme(tmp_path, monkeypatch):
     monkeypatch.delenv("NO_COLOR", raising=False)
     monkeypatch.delenv("CLI_THEME", raising=False)
     install_themes()
-    style.themed.cache_clear()
+    style.theme_styles.cache_clear()
     yield
-    style.themed.cache_clear()
+    style.theme_styles.cache_clear()
 
 
 def test_terminal_shows_theme_colors_around_the_same_text(theme):
@@ -56,8 +56,23 @@ def test_pipe_and_no_color_give_plain_text(theme, monkeypatch):
 
 def test_without_cli_theme_output_stays_plain(theme, monkeypatch):
     """Ohne das Extra theme (kein mmit-cli-theme): reiner Text, auch im Terminal."""
-    monkeypatch.setattr(style, "Output", None)
-    style.themed.cache_clear()
+    monkeypatch.setattr(style, "styles", None)
+    style.theme_styles.cache_clear()
     stream = Terminal()
     style.emit(PARTS, stream)
     assert stream.getvalue() == PLAIN
+
+
+LONG = [("  ", None), ("✗ BashLib 0.1.0 is too old: pipx install --force " + "x" * 120, "err")]
+
+
+@pytest.mark.parametrize("no_color", [False, True])
+def test_long_line_stays_one_line_in_narrow_terminal(theme, monkeypatch, no_color):
+    """R1-F1: Ein Befehl zum Kopieren bleibt eine Zeile, auch im schmalen Terminal; das
+    Terminal bricht nur weich um, devtools fügt keinen Zeilenumbruch ein."""
+    monkeypatch.setenv("COLUMNS", "40")
+    if no_color:
+        monkeypatch.setenv("NO_COLOR", "1")
+    stream = Terminal()
+    style.emit(LONG, stream)
+    assert ESCAPE.sub("", stream.getvalue()) == "".join(text for text, _ in LONG) + "\n"

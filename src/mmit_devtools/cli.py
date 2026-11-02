@@ -37,7 +37,7 @@ def line(tools: list[Pin], tool: Pin, text: str, role: str) -> None:
     """
     width = max(len(each.label) for each in tools)
     parts = [("  ", None), (tool.label.ljust(width), "key"), ("  ", None), (text, role)]
-    emit(parts, hang=width + 4)
+    emit(parts)
 
 
 def state_role(needed: bool) -> str:
@@ -47,7 +47,7 @@ def state_role(needed: bool) -> str:
 
 def message(text: str, role: str, stream: TextIO | None = None) -> None:
     """Eine eingerückte Meldung in einer Rolle, etwa hint, warn oder err."""
-    emit([("  ", None), (text, role)], stream, hang=2)
+    emit([("  ", None), (text, role)], stream)
 
 
 def status(tools: list[Tool]) -> int:
@@ -163,7 +163,7 @@ def table_row(row: list[str], widths: list[int], role: str) -> None:
     parts: list[tuple[str, str | None]] = [("  ", None), (cells[0], "key")]
     for cell in cells[1:]:
         parts += [("  ", None), (cell, "val")]
-    emit([*parts, ("  ", None), (row[4], role)], hang=sum(widths) + 2 * len(widths) + 2)
+    emit([*parts, ("  ", None), (row[4], role)])
 
 
 def upgrade(entries: list[Pin], config: Path, write: bool, unsourced: list[str]) -> int:
